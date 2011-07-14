@@ -1,0 +1,55 @@
+package rubble.rpc.basic_protocol;
+
+enum SourceConnectionType
+{
+  SOURCE_GENERATOR=0;
+  SOURCE_RELAY=1;
+}
+
+enum DestinationConnectionType
+{
+  TARGET_RELAY =0;
+  TARGET_MARSHALL=1;
+}
+
+message ClientRequest
+{
+  required uint32 service_ordinal = 1;
+  required uint32 request_ordinal = 2;
+  required string request_string  = 3;
+  required string response_string = 4;
+};
+
+message HelloRequest
+{
+  required SourceConnectionType source_type=1;
+  required DestinationConnectionType expected_target=2;
+  required string node_name=3;
+}
+
+enum HelloErrorType
+{
+  NO_HELLO_ERRORS=0;
+  DESTRINATION_EXPECTATION_MISMATCH=1;
+  SOURCE_EXPECTATION_MISMATCH=2;
+}
+
+message HelloResponse
+{
+  required HelloErrorType error_type=1;
+}
+
+message ListServicesRequest
+{
+}
+
+message ListServicesResponse
+{
+  repeated string Services =1;
+}
+
+service BasicProtocol
+{
+  rpc Hello (HelloRequest) returns (HelloResponse);
+  rpc ListServices(ListServicesRequest) returns (ListServicesResponse); 
+}
