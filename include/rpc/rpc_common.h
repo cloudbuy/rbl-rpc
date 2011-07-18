@@ -7,6 +7,9 @@
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <list>
+#include <boost/cstdint.hpp>
+#include <boost/scoped_array.hpp>
 
+#define RBL_RPC_CONF_INITIAL_BUFFER_SIZE 128
 
 #endif 

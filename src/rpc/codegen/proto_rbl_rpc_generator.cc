@@ -45,7 +45,8 @@ namespace {
         gen_out.Print("$M_OUT$ m_out;\n","M_OUT",method->output_type()->name());
         gen_out.Print("bool res = m_in.ParseFromString(request.request_string());\n");
         gen_out.Print("res = impl.$M_NAME$(m_in,m_out);\n","M_NAME",method->name());
-        gen_out.Print("res = m_out.SerializeToString( request.mutable_response_string());\n");
+// Don't need the following, the request and response objects are distinct
+//        gen_out.Print("res = m_out.SerializeToString( request.mutable_response_string());\n");
       }
       gen_out.Outdent();
       gen_out.Print("}\n\n");
@@ -164,15 +165,16 @@ void create_client_service( Printer & gen_out, const ServiceDescriptor * sd)
         gen_out.Print(map,"bool $MN$(const $IP$ & req, $OP$ & res)\n{\n");
         gen_out.Indent();
           gen_out.Print("static const boost::uint16_t method_id = $I$;\n","I", boost::lexical_cast<std::string>(i));
-          gen_out.Print("m_client_request.request_ordinal = * m_service_method_map[method_id];\n");
+          gen_out.Print("m_client_request.set_request_ordinal( * m_service_method_map[method_id]);\n");
           gen_out.Print("req.SerializeToString(m_client_request.mutable_request_string());\n\n");
           gen_out.Print("if(! dispatch())\n");
           gen_out.Indent();
             gen_out.Print("throw \"dispatch failed\";\n\n");
           gen_out.Outdent();
-          gen_out.Print("if( !res.ParseFromString( m_client_request.response_string()))\n");
-          gen_out.Indent();
-            gen_out.Print("throw \"response string not parsing correctly\";\n\n");
+// Don't need the following, the request and response objects are distinct
+//          gen_out.Print("if( !res.ParseFromString( m_client_request.response_string()))\n");
+//          gen_out.Indent();
+//            gen_out.Print("throw \"response string not parsing correctly\";\n\n");
           gen_out.Outdent();
         gen_out.Outdent();
         gen_out.Print("}\n");
@@ -207,6 +209,9 @@ class RblRpcGenerator : public CppGenerator
       
       io::ZeroCopyOutputStream * stream = generator->Open(stem.append("-server.rblrpc.h"));
       Printer gen_out(stream, '$');
+      
+      gen_out.Print("#ifndef RBL_RPC_GEN_$STEM$_SERVER_H\n", "STEM", stem);
+      gen_out.Print("#define RBL_RPC_GEN_$STEM$_SERVER_H\n\n", "STEM", stem);
 
       gen_out.Print("#include \"$incl$\" \n","incl", pbuf_name);
       gen_out.Print("#include \"$incl$\" \n","incl", "rpc/server_rpc_common.h");
@@ -252,14 +257,17 @@ class RblRpcGenerator : public CppGenerator
           else
             gen_out.Print(" }");
         }
+      gen_out.Print("#endif");
 
       // CLIENT CODE GENERATOR // 
       stem = path(file->name()).stem().string();
       io::ZeroCopyOutputStream * stream_client = generator->Open(stem.append("-client.rblrpc.h"));
       Printer gen_out_c(stream_client, '$');
-      
+      gen_out_c.Print("#ifndef RBL_RPC_GEN_$STEM$_CLIENT_H\n", "STEM", stem);
+      gen_out_c.Print("#define RBL_RPC_GEN_$STEM$_CLIENT_H\n\n", "STEM", stem);
+
       gen_out_c.Print("#include \"$incl$\" \n","incl", pbuf_name);
-      gen_out_c.Print("#include \"$incl$\" \n","incl", "rpc_common.h");
+      gen_out_c.Print("#include \"$incl$\" \n","incl", "rpc/client_rpc_common.h");
       gen_out_c.Print("#include <$incl$> \n\n","incl", "boost/cstdint.hpp");
 
       for(int i=0; i < ns_count;++i)
@@ -293,7 +301,7 @@ class RblRpcGenerator : public CppGenerator
           else
             gen_out_c.Print(" }");
         }
-
+      gen_out_c.Print("#endif\n");
 
       return true;
   }

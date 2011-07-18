@@ -24,7 +24,7 @@ set(BOOST_ROOT ${CMAKE_SOURCE_DIR}/dependencies/boost)
 
 find_package(Boost  REQUIRED COMPONENTS system filesystem)
 if(Boost_FOUND)
-  include_directories(Boost_INCLUDE_DIRS)
+  include_directories(${Boost_INCLUDE_DIRS})
   set(Boost_USE_MULTITHREADED      ON)
 endif()
 ###############################################################################

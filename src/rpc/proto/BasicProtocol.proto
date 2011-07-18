@@ -17,7 +17,11 @@ message ClientRequest
   required uint32 service_ordinal = 1;
   required uint32 request_ordinal = 2;
   required string request_string  = 3;
-  required string response_string = 4;
+};
+
+message ClientResponse
+{
+  required string response_string = 1;
 };
 
 message HelloRequest

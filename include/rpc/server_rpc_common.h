@@ -14,16 +14,34 @@ namespace rubble { namespace rpc {
     virtual const char * name() = 0;
     virtual ~ServiceBase(){};
   };
+} } 
+
+#include <rpc/proto/BasicProtocol-server.rblrpc.h>
+
+namespace rubble { namespace rpc {
+/*
+  class BasicProtocol
+  {
+  public:
+    bool Init() {}
+    bool TearDown() {}
+    bool Hello(HelloRequest,HelloResponse){};
+    bool ListServices(ListServicesRequest,ListServicesResponse){};
+  private:
+  };
+*/
 
   typedef boost::shared_ptr<ServiceBase> ServiceBase_shp;
 
-  class ServiceOracle
+  class ServiceOracle 
   {
   public:
     ServiceOracle()
       : m_services(),
-        service_count(0) {}
-    
+        service_count(0) 
+  {
+  }
+  
   bool RegisterService(ServiceBase_shp service)
     {
       common::OP_RESPONSE ret = m_services.SetEntry(
@@ -33,7 +51,7 @@ namespace rubble { namespace rpc {
       else 
         return false;
     }
-    
+   
   private:
     common::OidContainer<common::Oid, ServiceBase_shp> m_services;
     boost::uint8_t service_count;
