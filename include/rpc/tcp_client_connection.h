@@ -84,7 +84,6 @@ public:
   virtual void rpc_call_dispatch( basic_protocol::ClientRequest & req, 
                                   basic_protocol::ClientResponse & res)
   {
-    std::cout << "CD1" << std::endl;
     boost::uint32_t flag_return;
     boost::uint32_t msg_size_return;
 
@@ -101,6 +100,7 @@ public:
     std::size_t transfered_count = 
       boost::asio::write(m_socket, 
         boost::asio::buffer(m_buffer.get(), msg_size),m_ec);
+    std::cout << transfered_count << std::endl;
 
     if(!m_ec)
     {
@@ -117,7 +117,11 @@ public:
         transfered_count = boost::asio::read(m_socket, 
           boost::asio::buffer(m_buffer.get(), msg_size_return),m_ec);
       }
+      else
+        std::cout << "error" << std::endl;
     }
+    else
+      std::cout << "error" << std::endl;
   }
 private: 
   const unsigned int m_port;

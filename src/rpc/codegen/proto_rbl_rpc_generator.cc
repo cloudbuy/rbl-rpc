@@ -22,7 +22,7 @@ using namespace boost::filesystem;
 namespace {
   void skel_function(Printer & gen_out, const MethodDescriptor * md)
   {
-    gen_out.Print("bool $METHOD_NAME$($I$,$O$){};\n",
+    gen_out.Print("bool $METHOD_NAME$(t_client_cookie *,$I$,$O$){};\n",
       "METHOD_NAME",md->name(),
       "I",md->input_type()->name() ,
       "O",md->output_type()->name() ); 
@@ -35,7 +35,7 @@ namespace {
     {
       const MethodDescriptor * method = sd->method(i);
       gen_out.Print("template<typename T_IMPL>\n");
-      gen_out.Print("bool $SERV_NAME$_$METHOD_NAME$(T_IMPL & impl,basic_protocol::ClientRequest & request)\n",
+      gen_out.Print("bool $SERV_NAME$_$METHOD_NAME$(T_IMPL & impl,void * client_cookie_in, basic_protocol::ClientRequest & request)\n",
         "SERV_NAME", sd->name(), 
         "METHOD_NAME" , method->name());
       gen_out.Print("{\n");
@@ -44,7 +44,9 @@ namespace {
         gen_out.Print("$M_IN$ m_in;\n","M_IN",method->input_type()->name());
         gen_out.Print("$M_OUT$ m_out;\n","M_OUT",method->output_type()->name());
         gen_out.Print("bool res = m_in.ParseFromString(request.request_string());\n");
-        gen_out.Print("res = impl.$M_NAME$(m_in,m_out);\n","M_NAME",method->name());
+        gen_out.Print("typename T_IMPL::t_client_cookie * client_cookie =\n");
+        gen_out.Print("    static_cast<typename T_IMPL::t_client_cookie *>(client_cookie_in);\n");
+        gen_out.Print("res = impl.$M_NAME$(client_cookie,m_in,m_out);\n","M_NAME",method->name());
 // Don't need the following, the request and response objects are distinct
 //        gen_out.Print("res = m_out.SerializeToString( request.mutable_response_string());\n");
       }
@@ -73,11 +75,11 @@ namespace {
   
   void create_dispatch_function(Printer & gen_out, const ServiceDescriptor * sd)
   {
-    gen_out.Print("virtual bool Dispatch(basic_protocol::ClientRequest & cr)\n");
+    gen_out.Print("virtual bool Dispatch(void * client_cookie, basic_protocol::ClientRequest & cr)\n");
     gen_out.Print("{\n");
     gen_out.Indent();
     {
-      gen_out.Print("(*m_dispatch_table[cr.request_ordinal()])(m_impl,cr);\n");
+      gen_out.Print("(*m_dispatch_table[cr.request_ordinal()])(m_impl,client_cookie,cr);\n");
     }
     gen_out.Outdent();
     gen_out.Print("}\n");    
@@ -94,6 +96,7 @@ namespace {
     {
       gen_out.Print("public:\n");
       gen_out.Indent();
+        gen_out.Print("typedef boost::mpl::void_ t_client_cookie;\n");
         gen_out.Print("bool Init() {}\n");
         gen_out.Print("bool TearDown() {}\n");
     
@@ -118,11 +121,16 @@ namespace {
         gen_out.Print("virtual bool Init() { return m_impl.Init(); };\n");
         gen_out.Print("virtual bool TearDown() { return m_impl.TearDown(); };\n");
         gen_out.Print("virtual const char * name() { return \"$S_NAME$\"; }\n","S_NAME", sd->name());
+        gen_out.Print("virtual bool require_tracking() \n");
+        gen_out.Print("  { return !boost::mpl::is_void_< typename T_IMPL::t_client_cookie>::value; }\n");
       gen_out.Outdent();
         gen_out.Print("private:\n");
       gen_out.Indent();
         gen_out.Print("T_IMPL m_impl;\n");
-        gen_out.Print("common::OidContainer<common::Oid,bool (*)(T_IMPL &,basic_protocol::ClientRequest & )> m_dispatch_table;\n");
+        gen_out.Print("common::OidContainer<common::Oid,bool (*)( T_IMPL &,\n");
+        gen_out.Print("                                           void *,\n");
+        gen_out.Print("                                           basic_protocol::ClientRequest & )\n");       
+      gen_out.Print("                                           > m_dispatch_table;\n");
       gen_out.Outdent();
     }
     gen_out.Print("};\n\n");
@@ -215,7 +223,9 @@ class RblRpcGenerator : public CppGenerator
 
       gen_out.Print("#include \"$incl$\" \n","incl", pbuf_name);
       gen_out.Print("#include \"$incl$\" \n","incl", "rpc/server_rpc_common.h");
-      gen_out.Print("#include <$incl$> \n\n","incl", "boost/cstdint.hpp");
+      gen_out.Print("#include <$incl$> \n","incl", "boost/cstdint.hpp");
+      gen_out.Print("#include <$incl$> \n\n","incl", "boost/mpl/void.hpp");
+
 
       std::vector<std::string> namespace_strings;
      

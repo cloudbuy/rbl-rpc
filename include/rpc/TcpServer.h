@@ -16,31 +16,13 @@ namespace rubble { namespace rpc {
   {
   public:
     ClientConnection(io_service & io_s)
-      : m_socket(io_s),
-        m_flags(0),
-        m_buffer_size(RBL_RPC_CONF_INITIAL_BUFFER_SIZE),
-        m_buffer(new boost::uint8_t[RBL_RPC_CONF_INITIAL_BUFFER_SIZE]) {}
-
+      : m_socket(io_s) {}
+ 
     tcp::socket & socket() { return m_socket; }
-    
-    boost::uint8_t * resize_buffer(std::size_t new_size)
-    {
-      m_buffer.reset(new boost::uint8_t[new_size]);
-      m_buffer_size=new_size;
-      return m_buffer.get();
-    }
-    std::size_t buffer_size() { return m_buffer_size; }
-    
-    boost::uint8_t * buffer() { return m_buffer.get(); } 
-    boost::uint32_t & flags() { return m_flags; }
-    basic_protocol::ClientRequest request() { return m_request; }
+    ClientData & data() { return m_data; }
   private:
     tcp::socket m_socket;
-    basic_protocol::ClientRequest m_request;
-   
-    std::size_t m_buffer_size;
-    boost::scoped_array<boost::uint8_t> m_buffer;
-    boost::uint32_t m_flags;
+    ClientData m_data;
   };
   
 
@@ -58,33 +40,45 @@ namespace rubble { namespace rpc {
 
     void AddNewClient(client_connection_ptr ccp)
     {
+      std::cout << " added new client" << std::endl;
+
       m_connected_list.push_back(*ccp);
       boost::asio::async_read(  ccp->socket(), 
-                                boost::asio::buffer(ccp->buffer(), 8),
-                                boost::bind(&RpcOracle::handle_read_header, 
-                                  this, ccp, boost::asio::placeholders::error));
+                                boost::asio::buffer(ccp->data().buffer(), 8),
+                                boost::bind(&RpcOracle::handle_read_header,
+                                  this, ccp, 
+                                  boost::asio::placeholders::bytes_transferred,
+                                  boost::asio::placeholders::error));
     }
 
     void handle_read_header(  client_connection_ptr ccp, 
+                              std::size_t bytes_transfered,
                               const boost::system::error_code & error)
     {
       if(!error)
       {
+        std::cout << " read header" << std::endl;        
         boost::uint32_t msg_sz;
-        google::protobuf::io::CodedInputStream cis(ccp->buffer(),8);
+        google::protobuf::io::CodedInputStream cis(ccp->data().buffer(),8);
         
-        cis.ReadLittleEndian32(&ccp->flags());
+        cis.ReadLittleEndian32(&ccp->data().flags());
         cis.ReadLittleEndian32(&msg_sz);
-        
-        if(msg_sz < ccp->buffer_size())
-          ccp->resize_buffer(msg_sz);
-        
+       
+        std::cout << ccp->data().flags() << "-" << msg_sz << "-"<<  bytes_transfered << std::endl;
+ 
+        if(msg_sz < ccp->data().buffer_size())
+          ccp->data().resize_buffer(msg_sz);
+
+
         boost::asio::async_read(  ccp->socket(), 
-                                  boost::asio::buffer(ccp->buffer(), msg_sz),
+                                  boost::asio::buffer(ccp->data().buffer(), ( msg_sz -8)),
                                   boost::bind(&RpcOracle::handle_read_message, 
-                                  this, ccp, boost::asio::placeholders::bytes_transferred,
-                                  boost::asio::placeholders::error));
+                                    this, ccp, 
+                                    boost::asio::placeholders::bytes_transferred,
+                                    boost::asio::placeholders::error));
       }
+      else
+        std::cout << "error" << std::endl;
     }
     
     void handle_read_message( client_connection_ptr ccp,
@@ -93,8 +87,12 @@ namespace rubble { namespace rpc {
     {
       if(!error)
       {
-        ccp->request().ParseFromArray( ccp->buffer(), bytes_sent);
+        std::cout << "handle read message" << std::endl;
+        ccp->data().request().ParseFromArray( ccp->data().buffer(), bytes_sent);
+        std::cout << "bytes sent" << std::endl;
       }
+      else
+        std::cout << "error" << std::endl;
     }
     
     void handle_write_response( client_connection_ptr ccp, 
@@ -121,6 +119,7 @@ namespace rubble { namespace rpc {
         m_rpc_oracle(rpc_oracle),
         m_acceptor(m_io_service, m_endpoint)
     {
+      std::cout << "accept" << std::endl;
       client_connection_ptr ccp(new ClientConnection(m_io_service));
       m_acceptor.async_accept(  
         ccp->socket(),
@@ -130,6 +129,7 @@ namespace rubble { namespace rpc {
     
     void handle_accept(client_connection_ptr ccp, const boost::system::error_code & error)
     {
+      std::cout << "handle_accept" << std::endl;
       if(!error)
       {
         m_rpc_oracle.AddNewClient(ccp);
@@ -140,6 +140,8 @@ namespace rubble { namespace rpc {
           ccp, placeholders::error));
 
       }
+      else
+        std::cout << "error" << std::endl;
     }
     
     boost::asio::io_service & io_service() { return m_io_service; }
