@@ -1,4 +1,4 @@
-#include "server_rpc_common.h"
+#include <rpc/server/rpc_common.h>
 #include <rpc/proto/BasicProtocol-server.rblrpc.h>
 #include <boost/intrusive/list.hpp>
 #include <iostream>

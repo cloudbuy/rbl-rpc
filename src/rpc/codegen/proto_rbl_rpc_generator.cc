@@ -222,7 +222,7 @@ class RblRpcGenerator : public CppGenerator
       gen_out.Print("#define RBL_RPC_GEN_$STEM$_SERVER_H\n\n", "STEM", stem);
 
       gen_out.Print("#include \"$incl$\" \n","incl", pbuf_name);
-      gen_out.Print("#include \"$incl$\" \n","incl", "rpc/server_rpc_common.h");
+      gen_out.Print("#include <$incl$> \n","incl", "rpc/server/rpc_common.h");
       gen_out.Print("#include <$incl$> \n","incl", "boost/cstdint.hpp");
       gen_out.Print("#include <$incl$> \n\n","incl", "boost/mpl/void.hpp");
 

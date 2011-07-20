@@ -1,4 +1,4 @@
-#include <rpc/server_rpc_common.h>
+#include <rpc/server/rpc_common.h>
 #include <rpc/TcpServer.h>
 
 using namespace rubble::rpc;

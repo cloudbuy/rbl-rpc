@@ -29,10 +29,19 @@ if(Boost_FOUND)
 endif()
 ###############################################################################
 
+# GTEST ######################################################################
+SET(GTEST_ROOT  ${CMAKE_SOURCE_DIR}/dependencies/gtest)
+
+find_package(GTest REQUIRED)
+if(GTEST_FOUND)
+  include_directories(${GTEST_INCLUDE_DIRS})
+endif()
+##############################################################################
 include_directories(include)
 # GENERATED CODE GOES INTO /src , therefore the generated headers need to be 
 # picked up from here
 include_directories("${CMAKE_BINARY_DIR}/src")
+
 
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/tools)
 

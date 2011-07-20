@@ -1,7 +1,7 @@
 #ifndef RBL_RPC_CLIENT_RPC_COMMON_H
 #define RBL_RPC_CLIENT_RPC_COMMON_H
  
-#include "rpc_common.h"
+#include "common/rpc_common.h"
 
 namespace rubble { namespace rpc {
   class ClientConnection; 

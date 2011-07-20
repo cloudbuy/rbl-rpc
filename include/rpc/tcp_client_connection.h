@@ -2,7 +2,7 @@
 #define RBL_RPC_TCP_CLIENT_CONNECTION_H 
 
 #include <boost/asio.hpp>
-#include "rpc_common.h"
+#include "common/rpc_common.h"
 #include <google/protobuf/io/zero_copy_stream_impl_lite.h>
 
 namespace rubble { namespace rpc {
