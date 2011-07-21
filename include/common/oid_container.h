@@ -161,9 +161,12 @@ namespace rubble { namespace common {
     inline const entry_type * EntryAtordinal (boost::uint32_t ordinal)    const;
     inline const entry_type * EntryWithName( const name_type & name_in)   const;
     inline OP_RESPONSE ContainsEither(const identifier_type & id)         const;
-    const  basic_entry_type * operator[] (const name_type & name)         const;
+    const basic_entry_type * operator[] (const name_type & name)          const;
     const basic_entry_type * operator[] (const ordinal_type & ordinal)    const;
     
+    basic_entry_type * operator[] (const name_type & name)          ;
+    basic_entry_type * operator[] (const ordinal_type & ordinal)    ;
+
     OP_RESPONSE SetEntry( const entry_type & entry);
     OP_RESPONSE SetEntry( const identifier_type & ,const basic_entry_type & );
   protected:

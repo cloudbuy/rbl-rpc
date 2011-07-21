@@ -396,6 +396,18 @@ namespace rubble  { namespace common {
   }
 
   template<typename _identifier_type, typename _entry_type>
+  inline typename  OidContainer<_identifier_type, _entry_type>::
+  basic_entry_type *
+  OidContainer<_identifier_type, _entry_type>::
+  operator[] (const name_type & name)   
+  {
+    return const_cast<basic_entry_type *>(
+      static_cast<const OidContainer<_identifier_type, _entry_type> *>
+        (this)->operator[](name));
+
+  }
+
+  template<typename _identifier_type, typename _entry_type>
   inline const typename OidContainer<_identifier_type, _entry_type>::
   basic_entry_type *
   OidContainer<_identifier_type, _entry_type>::
@@ -406,6 +418,17 @@ namespace rubble  { namespace common {
       return (& ( ent->entry() ) );
     }
     else return NULL;
+  }
+  
+  template<typename _identifier_type, typename _entry_type>
+  inline typename OidContainer<_identifier_type, _entry_type>::
+  basic_entry_type *
+  OidContainer<_identifier_type, _entry_type>::
+  operator[] (const ordinal_type & ordinal)   
+  {
+    return const_cast<basic_entry_type *>(
+      static_cast<const OidContainer<_identifier_type, _entry_type> *>
+        (this)->operator[](ordinal));
   }
 
   template<typename _identifier_type, typename _entry_type>
