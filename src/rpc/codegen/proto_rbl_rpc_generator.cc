@@ -22,7 +22,7 @@ using namespace boost::filesystem;
 namespace {
   void skel_function(Printer & gen_out, const MethodDescriptor * md)
   {
-    gen_out.Print("bool $METHOD_NAME$(t_client_cookie *,$I$,$O$){};\n",
+    gen_out.Print("bool $METHOD_NAME$(t_client_cookie **,ClientData *,$I$,$O$){}\n",
       "METHOD_NAME",md->name(),
       "I",md->input_type()->name() ,
       "O",md->output_type()->name() ); 
@@ -35,7 +35,7 @@ namespace {
     {
       const MethodDescriptor * method = sd->method(i);
       gen_out.Print("template<typename T_IMPL>\n");
-      gen_out.Print("bool $SERV_NAME$_$METHOD_NAME$(T_IMPL & impl,void * client_cookie_in, basic_protocol::ClientRequest & request)\n",
+      gen_out.Print("bool $SERV_NAME$_$METHOD_NAME$(T_IMPL & impl,ClientCookiePtrContainer * client_cookie_in,ClientData * cd, basic_protocol::ClientRequest & request)\n",
         "SERV_NAME", sd->name(), 
         "METHOD_NAME" , method->name());
       gen_out.Print("{\n");
@@ -44,9 +44,7 @@ namespace {
         gen_out.Print("$M_IN$ m_in;\n","M_IN",method->input_type()->name());
         gen_out.Print("$M_OUT$ m_out;\n","M_OUT",method->output_type()->name());
         gen_out.Print("bool res = m_in.ParseFromString(request.request_string());\n");
-        gen_out.Print("typename T_IMPL::t_client_cookie * client_cookie =\n");
-        gen_out.Print("    static_cast<typename T_IMPL::t_client_cookie *>(client_cookie_in);\n");
-        gen_out.Print("res = impl.$M_NAME$(client_cookie,m_in,m_out);\n","M_NAME",method->name());
+        gen_out.Print("res = impl.$M_NAME$(client_cookie_in,cd,m_in,m_out);\n","M_NAME",method->name());
 // Don't need the following, the request and response objects are distinct
 //        gen_out.Print("res = m_out.SerializeToString( request.mutable_response_string());\n");
       }
@@ -75,11 +73,11 @@ namespace {
   
   void create_dispatch_function(Printer & gen_out, const ServiceDescriptor * sd)
   {
-    gen_out.Print("virtual bool Dispatch(void * client_cookie, basic_protocol::ClientRequest & cr)\n");
+    gen_out.Print("virtual bool Dispatch(typename T_IMPL::t_client_cookie ** client_cookie,ClientData * cd, basic_protocol::ClientRequest & cr)\n");
     gen_out.Print("{\n");
     gen_out.Indent();
     {
-      gen_out.Print("(*m_dispatch_table[cr.request_ordinal()])(m_impl,client_cookie,cr);\n");
+      gen_out.Print("(*m_dispatch_table[cr.request_ordinal()])(m_impl,client_cookie,cd,cr);\n");
     }
     gen_out.Outdent();
     gen_out.Print("}\n");    
@@ -96,7 +94,7 @@ namespace {
     {
       gen_out.Print("public:\n");
       gen_out.Indent();
-        gen_out.Print("typedef boost::mpl::void_ t_client_cookie;\n");
+        gen_out.Print("typedef ClientCookieBase t_client_cookie;\n");
         gen_out.Print("bool Init() {}\n");
         gen_out.Print("bool TearDown() {}\n");
     
@@ -128,7 +126,8 @@ namespace {
       gen_out.Indent();
         gen_out.Print("T_IMPL m_impl;\n");
         gen_out.Print("common::OidContainer<common::Oid,bool (*)( T_IMPL &,\n");
-        gen_out.Print("                                           void *,\n");
+        gen_out.Print("                                           ClientCookiePtrContainer *,\n");
+        gen_out.Print("                                           ClientData *,\n");
         gen_out.Print("                                           basic_protocol::ClientRequest & )\n");       
       gen_out.Print("                                           > m_dispatch_table;\n");
       gen_out.Outdent();
@@ -204,6 +203,8 @@ class RblRpcGenerator : public CppGenerator
                           string * error) const
   {
       std::string stem = path(file->name()).stem().string();
+      std::string stem2 = stem;
+
       std::string parent_path = path(file->name()).parent_path().string();
 
       std::string pbuf_name = parent_path.append(stem).append(".pb.h");
@@ -216,10 +217,11 @@ class RblRpcGenerator : public CppGenerator
       // SERVER CODE GENERATOR //
       
       io::ZeroCopyOutputStream * stream = generator->Open(stem.append("-server.rblrpc.h"));
+      stem2.append("_SERVER_RBLRPC_H");
       Printer gen_out(stream, '$');
       
-      gen_out.Print("#ifndef RBL_RPC_GEN_$STEM$_SERVER_H\n", "STEM", stem);
-      gen_out.Print("#define RBL_RPC_GEN_$STEM$_SERVER_H\n\n", "STEM", stem);
+      gen_out.Print("#ifndef RBL_RPC_GEN_$STEM$_SERVER_H\n", "STEM", stem2);
+      gen_out.Print("#define RBL_RPC_GEN_$STEM$_SERVER_H\n\n", "STEM", stem2);
 
       gen_out.Print("#include \"$incl$\" \n","incl", pbuf_name);
       gen_out.Print("#include <$incl$> \n","incl", "rpc/server/rpc_common.h");

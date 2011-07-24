@@ -57,10 +57,6 @@ namespace rubble { namespace rpc {
     
     enum OP_ERROR_CODE {
       SUCCESS = 0,
-      ALLREADY_SIZED,
-      ORDINAL_OUT_OF_RANGE,
-      ORDINAL_ALLREADY_ACTIVATED,
-      UNUSED_SERVICE_ORDINAL,
       COOKIE_ABSENT
     };
    
