@@ -15,7 +15,7 @@ namespace rubble { namespace rpc {
     virtual const char * name() = 0;
     virtual ~ServiceBase(){};
     
-  r common::ordinal_type ordinal() { return m_ordinal; }
+    common::ordinal_type ordinal() { return m_ordinal; }
     void set_ordinal(common::ordinal_type ordinal) { m_ordinal = ordinal; }
   private:
     common::ordinal_type m_ordinal;
@@ -74,10 +74,4 @@ namespace rubble { namespace rpc {
 } } 
 
 #include <rpc/proto/BasicProtocol-server.rblrpc.h>
-
-namespace rubble { namespace rpc {
-
-   
-} }
-
 #endif 

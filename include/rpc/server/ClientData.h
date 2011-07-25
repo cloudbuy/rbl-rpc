@@ -24,11 +24,14 @@ namespace rubble { namespace rpc {
     
     boost::uint8_t * buffer() { return m_buffer.get(); } 
     boost::uint32_t & flags() { return m_flags; }
-    basic_protocol::ClientRequest request() { return m_request; }
+    
+    basic_protocol::ClientRequest & request() { return m_request; }
+    basic_protocol::ClientResponse & response() { return m_response;  }
 
     std::size_t buffer_size() { return m_buffer_size; }
   private:
     basic_protocol::ClientRequest m_request;
+    basic_protocol::ClientResponse m_response;
     std::string name;
    
     std::size_t m_buffer_size;

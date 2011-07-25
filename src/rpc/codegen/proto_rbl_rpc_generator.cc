@@ -35,7 +35,7 @@ namespace {
     {
       const MethodDescriptor * method = sd->method(i);
       gen_out.Print("template<typename T_IMPL>\n");
-      gen_out.Print("bool $SERV_NAME$_$METHOD_NAME$(T_IMPL & impl,ClientCookiePtrContainer * client_cookie_in,ClientData * cd, basic_protocol::ClientRequest & request)\n",
+      gen_out.Print("bool $SERV_NAME$_$METHOD_NAME$(T_IMPL & impl,ClientCookie * client_cookie_in,ClientData * cd, basic_protocol::ClientRequest & request)\n",
         "SERV_NAME", sd->name(), 
         "METHOD_NAME" , method->name());
       gen_out.Print("{\n");
@@ -126,7 +126,7 @@ namespace {
       gen_out.Indent();
         gen_out.Print("T_IMPL m_impl;\n");
         gen_out.Print("common::OidContainer<common::Oid,bool (*)( T_IMPL &,\n");
-        gen_out.Print("                                           ClientCookiePtrContainer *,\n");
+        gen_out.Print("                                           ClientCookie *,\n");
         gen_out.Print("                                           ClientData *,\n");
         gen_out.Print("                                           basic_protocol::ClientRequest & )\n");       
       gen_out.Print("                                           > m_dispatch_table;\n");
@@ -224,7 +224,8 @@ class RblRpcGenerator : public CppGenerator
       gen_out.Print("#define RBL_RPC_GEN_$STEM$_SERVER_H\n\n", "STEM", stem2);
 
       gen_out.Print("#include \"$incl$\" \n","incl", pbuf_name);
-      gen_out.Print("#include <$incl$> \n","incl", "rpc/server/rpc_common.h");
+      gen_out.Print("#include <$incl$> \n","incl", "rpc/server/ClientServiceCookies.h");
+      gen_out.Print("#include <$incl$> \n","incl", "rpc/server/ServiceOracle.h");
       gen_out.Print("#include <$incl$> \n","incl", "boost/cstdint.hpp");
       gen_out.Print("#include <$incl$> \n\n","incl", "boost/mpl/void.hpp");
 

@@ -47,7 +47,7 @@ foreach(proto_var ${PROTO_FILES})
   
   add_custom_command( OUTPUT ${fn_c} ${fn_s} ${fn_p_c} ${fn_p_h}
                       COMMAND ${PROTOBUF_PROTOC_EXECUTABLE} --proto_path=${CMAKE_CURRENT_SOURCE_DIR}  ${CMAKE_CURRENT_SOURCE_DIR}/${proto_var} --cpp_out=. --plugin=protoc-gen-RBLRPC=${CMAKE_BINARY_DIR}/tools/protoc-gen-RBLRPC --RBLRPC_out=. 
-                      DEPENDS ${proto_var}
+                      DEPENDS ${proto_var} protoc-gen-RBLRPC
   )
   
   if(${M_S_} OR ${M_C_})

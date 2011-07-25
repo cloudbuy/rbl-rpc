@@ -1,7 +1,7 @@
-#include <rpc/server/rpc_common.h>
-#include <rpc/TcpServer.h>
+//#include <rpc/server/rpc_common.h>
+//#include <rpc/TcpServer.h>
 
-using namespace rubble::rpc;
+//using namespace rubble::rpc;
 
 int main()
 {
