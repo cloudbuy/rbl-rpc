@@ -33,7 +33,7 @@ namespace rubble { namespace rpc {
     basic_protocol::ClientRequest m_request;
     basic_protocol::ClientResponse m_response;
     std::string name;
-   
+    boost::system::error_code n_ec;   
     std::size_t m_buffer_size;
     boost::scoped_array<boost::uint8_t> m_buffer;
     boost::uint32_t m_flags;

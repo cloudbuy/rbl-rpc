@@ -9,9 +9,9 @@ namespace rubble { namespace rpc {
   class ServiceBase
   {
   public:
-    virtual bool Init() =0;
-    virtual bool TearDown()=0;
-    virtual bool Dispatch(ClientCookieBase ** client_cookie, ClientData * cd, basic_protocol::ClientRequest & cr)=0;
+    virtual void init(boost::system::error_code & ec) =0;
+    virtual void teardown(boost::system::error_code & ec)=0;
+    virtual bool dispatch(ClientCookie & client_cookie, ClientData & cd, basic_protocol::ClientRequest & cr)=0;
     virtual const char * name() = 0;
     virtual ~ServiceBase(){};
     
@@ -33,44 +33,7 @@ namespace rubble { namespace rpc {
 */
    typedef boost::shared_ptr<ServiceBase> ServiceBase_shp;
 
-  class ServiceOracle 
-  {
-  public:
-    ServiceOracle()
-      : m_services(),
-        m_is_sealed(false),
-        m_service_count(0) 
-    {
-    }
-  
-    bool RegisterService(ServiceBase_shp service)
-    {
-      if(!m_is_sealed)
-      {
-        common::OP_RESPONSE ret = m_services.SetEntry(
-          common::Oid(service->name(),m_service_count),service);
-        if(ret == common::OP_NO_ERROR)
-        {
-          m_service_count++; 
-          return true; 
-        }
-        else 
-          throw "Service ordinal or name, allready exists;";
-      }
-        else throw "Service Oracle is final/sealed, cannot add more entries";
-    }
-    void seal()
-    {
-      
-      m_is_sealed = true;
-    }
-  private:
-    common::OidContainer<common::Oid, ServiceBase_shp> m_services;
-    boost::uint8_t m_service_count;
-    bool m_is_sealed;
-  };
-
-  
+ 
 } } 
 
 #include <rpc/proto/BasicProtocol-server.rblrpc.h>

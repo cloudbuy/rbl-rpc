@@ -25,6 +25,7 @@ macro(generate_rpc file_name)
 endmacro(generate_rpc)
 
 generate_rpc(BasicProtocol.proto generator_relay relay_marshall)
+generate_rpc(TestService.proto relay_marshall)
 # generate_rpc(dummy.proto  relay_marshall)
 
 foreach(proto_var ${PROTO_FILES})

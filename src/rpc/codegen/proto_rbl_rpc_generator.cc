@@ -22,7 +22,7 @@ using namespace boost::filesystem;
 namespace {
   void skel_function(Printer & gen_out, const MethodDescriptor * md)
   {
-    gen_out.Print("bool $METHOD_NAME$(t_client_cookie **,ClientData *,$I$,$O$){}\n",
+    gen_out.Print("bool $METHOD_NAME$(ClientCookie &,ClientData &,$I$ & ,$O$ & ){}\n",
       "METHOD_NAME",md->name(),
       "I",md->input_type()->name() ,
       "O",md->output_type()->name() ); 
@@ -35,7 +35,7 @@ namespace {
     {
       const MethodDescriptor * method = sd->method(i);
       gen_out.Print("template<typename T_IMPL>\n");
-      gen_out.Print("bool $SERV_NAME$_$METHOD_NAME$(T_IMPL & impl,ClientCookie * client_cookie_in,ClientData * cd, basic_protocol::ClientRequest & request)\n",
+      gen_out.Print("bool $SERV_NAME$_$METHOD_NAME$(T_IMPL & impl,ClientCookie & client_cookie_in,ClientData & cd, basic_protocol::ClientRequest & request)\n",
         "SERV_NAME", sd->name(), 
         "METHOD_NAME" , method->name());
       gen_out.Print("{\n");
@@ -73,7 +73,7 @@ namespace {
   
   void create_dispatch_function(Printer & gen_out, const ServiceDescriptor * sd)
   {
-    gen_out.Print("virtual bool Dispatch(typename T_IMPL::t_client_cookie ** client_cookie,ClientData * cd, basic_protocol::ClientRequest & cr)\n");
+    gen_out.Print("virtual bool dispatch(ClientCookie & client_cookie,ClientData & cd, basic_protocol::ClientRequest & cr)\n");
     gen_out.Print("{\n");
     gen_out.Indent();
     {
@@ -95,8 +95,8 @@ namespace {
       gen_out.Print("public:\n");
       gen_out.Indent();
         gen_out.Print("typedef ClientCookieBase t_client_cookie;\n");
-        gen_out.Print("bool Init() {}\n");
-        gen_out.Print("bool TearDown() {}\n");
+        gen_out.Print("void init(boost::system::error_code & ec) {}\n");
+        gen_out.Print("void teardown(boost::system::error_code & ec) {}\n");
     
         for(int i=0; i<method_count; ++i)
         {
@@ -116,18 +116,18 @@ namespace {
       gen_out.Indent();
         create_constructor(gen_out,sd);
         create_dispatch_function(gen_out,sd);
-        gen_out.Print("virtual bool Init() { return m_impl.Init(); };\n");
-        gen_out.Print("virtual bool TearDown() { return m_impl.TearDown(); };\n");
+        gen_out.Print("virtual void init(boost::system::error_code & ec) { return m_impl.init(ec); };\n");
+        gen_out.Print("virtual void teardown(boost::system::error_code & ec) { return m_impl.teardown(ec); };\n");
         gen_out.Print("virtual const char * name() { return \"$S_NAME$\"; }\n","S_NAME", sd->name());
         gen_out.Print("virtual bool require_tracking() \n");
-        gen_out.Print("  { return !boost::mpl::is_void_< typename T_IMPL::t_client_cookie>::value; }\n");
+        gen_out.Print("  { return !(boost::is_same<ClientCookieBase, typename T_IMPL::t_client_cookie>::value); }\n");
       gen_out.Outdent();
         gen_out.Print("private:\n");
       gen_out.Indent();
         gen_out.Print("T_IMPL m_impl;\n");
         gen_out.Print("common::OidContainer<common::Oid,bool (*)( T_IMPL &,\n");
-        gen_out.Print("                                           ClientCookie *,\n");
-        gen_out.Print("                                           ClientData *,\n");
+        gen_out.Print("                                           ClientCookie &,\n");
+        gen_out.Print("                                           ClientData &,\n");
         gen_out.Print("                                           basic_protocol::ClientRequest & )\n");       
       gen_out.Print("                                           > m_dispatch_table;\n");
       gen_out.Outdent();
@@ -227,7 +227,7 @@ class RblRpcGenerator : public CppGenerator
       gen_out.Print("#include <$incl$> \n","incl", "rpc/server/ClientServiceCookies.h");
       gen_out.Print("#include <$incl$> \n","incl", "rpc/server/ServiceOracle.h");
       gen_out.Print("#include <$incl$> \n","incl", "boost/cstdint.hpp");
-      gen_out.Print("#include <$incl$> \n\n","incl", "boost/mpl/void.hpp");
+      gen_out.Print("#include <$incl$> \n\n","incl", "boost/type_traits/is_same.hpp");
 
 
       std::vector<std::string> namespace_strings;

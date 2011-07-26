@@ -451,7 +451,7 @@ namespace rubble  { namespace common {
   inline OP_RESPONSE OidContainer<_identifier_type, _entry_type>::
   SetEntry( const identifier_type & id, const basic_entry_type & entry)
   {
-    SetEntry( entry_type(id,entry) );
+    return SetEntry( entry_type(id,entry) );
   }
 
   template<typename _identifier_type, typename _entry_type>
