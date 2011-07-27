@@ -60,7 +60,7 @@ namespace rubble { namespace rpc {
       COOKIE_ABSENT
     };
    
-    ~ ClientServiceCookies();
+    ~ ClientServiceCookies(){}
   
     void set_size(std::size_t sz);
     

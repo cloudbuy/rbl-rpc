@@ -22,7 +22,7 @@ using namespace boost::filesystem;
 namespace {
   void skel_function(Printer & gen_out, const MethodDescriptor * md)
   {
-    gen_out.Print("bool $METHOD_NAME$(ClientCookie &,ClientData &,$I$ & ,$O$ & ){}\n",
+    gen_out.Print("bool $METHOD_NAME$(ClientCookie *,ClientData &,$I$ & ,$O$ & ){}\n",
       "METHOD_NAME",md->name(),
       "I",md->input_type()->name() ,
       "O",md->output_type()->name() ); 
@@ -35,7 +35,7 @@ namespace {
     {
       const MethodDescriptor * method = sd->method(i);
       gen_out.Print("template<typename T_IMPL>\n");
-      gen_out.Print("bool $SERV_NAME$_$METHOD_NAME$(T_IMPL & impl,ClientCookie & client_cookie_in,ClientData & cd, basic_protocol::ClientRequest & request)\n",
+      gen_out.Print("bool $SERV_NAME$_$METHOD_NAME$(T_IMPL & impl,ClientCookie * client_cookie_in,ClientData & cd, basic_protocol::ClientRequest & request)\n",
         "SERV_NAME", sd->name(), 
         "METHOD_NAME" , method->name());
       gen_out.Print("{\n");
@@ -73,7 +73,7 @@ namespace {
   
   void create_dispatch_function(Printer & gen_out, const ServiceDescriptor * sd)
   {
-    gen_out.Print("virtual bool dispatch(ClientCookie & client_cookie,ClientData & cd, basic_protocol::ClientRequest & cr)\n");
+    gen_out.Print("virtual bool dispatch(ClientCookie * client_cookie,ClientData & cd, basic_protocol::ClientRequest & cr)\n");
     gen_out.Print("{\n");
     gen_out.Indent();
     {
@@ -116,6 +116,7 @@ namespace {
       gen_out.Indent();
         create_constructor(gen_out,sd);
         create_dispatch_function(gen_out,sd);
+        gen_out.Print("T_IMPL & impl() {return m_impl;}\n");
         gen_out.Print("virtual void init(boost::system::error_code & ec) { return m_impl.init(ec); };\n");
         gen_out.Print("virtual void teardown(boost::system::error_code & ec) { return m_impl.teardown(ec); };\n");
         gen_out.Print("virtual const char * name() { return \"$S_NAME$\"; }\n","S_NAME", sd->name());
@@ -126,7 +127,7 @@ namespace {
       gen_out.Indent();
         gen_out.Print("T_IMPL m_impl;\n");
         gen_out.Print("common::OidContainer<common::Oid,bool (*)( T_IMPL &,\n");
-        gen_out.Print("                                           ClientCookie &,\n");
+        gen_out.Print("                                           ClientCookie *,\n");
         gen_out.Print("                                           ClientData &,\n");
         gen_out.Print("                                           basic_protocol::ClientRequest & )\n");       
       gen_out.Print("                                           > m_dispatch_table;\n");

@@ -11,7 +11,7 @@ namespace rubble { namespace rpc {
   public:
     virtual void init(boost::system::error_code & ec) =0;
     virtual void teardown(boost::system::error_code & ec)=0;
-    virtual bool dispatch(ClientCookie & client_cookie, ClientData & cd, basic_protocol::ClientRequest & cr)=0;
+    virtual bool dispatch(ClientCookie * client_cookie, ClientData & cd, basic_protocol::ClientRequest & cr)=0;
     virtual const char * name() = 0;
     virtual ~ServiceBase(){};
     

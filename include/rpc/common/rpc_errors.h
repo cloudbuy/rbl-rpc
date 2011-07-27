@@ -14,7 +14,8 @@ namespace rubble { namespace rpc {
       RBL_RPC_SUCCESS = 0,
       RBL_RPC_BACKEND_SEALED,
       RBL_RPC_BACKEND_INITIALIZATION_ERROR,
-      RBL_RPC_BACKEND_IDENTIFIER_COLLISION
+      RBL_RPC_BACKEND_IDENTIFIER_COLLISION,
+      RBL_BACKEND_TEARDOWN_ERROR
     };
   }
 
@@ -36,7 +37,7 @@ namespace rubble { namespace rpc {
   typedef boost::error_info<struct tag_service_name, std::string>
     rbl_backend_service_name;  
 
-  struct BackEndInitializationException :  virtual boost::exception
+  struct BackEndException :  virtual boost::exception
   {
   };
   #define RBL_BACKEND_THROW_EXCEPTION(x) \

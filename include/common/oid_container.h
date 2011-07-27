@@ -153,7 +153,7 @@ namespace rubble { namespace common {
     template<typename Id_T, typename Entry_T>
     void SlicingPopulate(OidContainer<Id_T,Entry_T> & target)             const;
     
-    inline void clear();
+inline void clear();
     
     inline const vector_type & get_entries()                              const;
     inline const std::size_t size()                                       const;
