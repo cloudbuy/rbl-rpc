@@ -47,9 +47,15 @@ message ListServicesRequest
 {
 }
 
+message ServiceEntry
+{
+  required uint32 service_ordinal=1;
+  required string service_name=2;
+}
+
 message ListServicesResponse
 {
-  repeated string Services =1;
+  repeated ServiceEntry Services =1;
 }
 
 service BasicProtocol

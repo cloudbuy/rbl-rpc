@@ -12,7 +12,7 @@ using namespace rubble::rpc::test_proto;
     typedef ClientCookieBase t_client_cookie;
     void init(boost::system::error_code & ec) { ec.clear(); }
     void teardown(boost::system::error_code & ec) {}
-    bool dummy_rpc(ClientCookie *,ClientData &,Request & ,Response & ){}
+    bool dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & ){}
   private:
   };
 
@@ -22,7 +22,7 @@ using namespace rubble::rpc::test_proto;
     typedef ClientCookieBase t_client_cookie;
     void init(boost::system::error_code & ec) { ec.assign(1,rpc_backend_error); }
     void teardown(boost::system::error_code & ec) {}
-    bool dummy_rpc(ClientCookie *,ClientData &,Request & ,Response & ){}
+    bool dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & ){}
   private:
   };
 
@@ -32,7 +32,7 @@ using namespace rubble::rpc::test_proto;
     typedef ClientCookieBase t_client_cookie;
     void init(boost::system::error_code & ec) { ec.clear(); }
     void teardown(boost::system::error_code & ec) {ec.clear();}
-    bool dummy_rpc(ClientCookie *,ClientData &,Request & ,Response & ){}
+    bool dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & ){}
   private:
   };
 
@@ -42,7 +42,7 @@ using namespace rubble::rpc::test_proto;
     typedef ClientCookieBase t_client_cookie;
     void init(boost::system::error_code & ec) { ec.clear(); }
     void teardown(boost::system::error_code & ec) { ec.assign(1,rpc_backend_error); }
-    bool dummy_rpc(ClientCookie *,ClientData &,Request & ,Response & ){}
+    bool dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & ){}
   private:
   };
 
@@ -52,7 +52,7 @@ using namespace rubble::rpc::test_proto;
     typedef ClientCookieBase t_client_cookie;
     void init(boost::system::error_code & ec) { ec.clear(); }
     void teardown(boost::system::error_code & ec) { ec.clear(); }
-    bool dummy_rpc(ClientCookie *,ClientData &,Request & ,Response & ){}
+    bool dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & ){}
   private:
   };
 
@@ -96,22 +96,55 @@ TEST(backed_tests,teardown_fail)
   ASSERT_THROW(b.shutdown(),BackEndException);
 }
 
-  struct simple_rpc_invoker
+  struct synchronous_rpc_invoker
   {
-    void operator()(  boost::system::error_code ec,
-                      rubble::common::OidContainer<common::Oid, ServiceBase_shp> * services, 
-                      ClientData_shp cd_shp)
-    {
-      ready=false;
+    struct notification_object_
+    {  
+      notification_object_()
+      {
+        reset();
+      }
+      void reset()
+      {
+        ready = false;
+        ec.clear();
+      }
+      bool ready;
+      boost::mutex mutex;
+      boost::condition_variable cond;
+      boost::system::error_code ec;
+    };
 
-      boost::unique_lock<boost::mutex> lock(mutex);
-      ready = true;
-      cond.notify_one();
+    synchronous_rpc_invoker(ClientData::shp & cd_in)
+      : client_data(cd_in),
+        notification_object(new notification_object_()) {}
+
+    void reset()
+    {
+      notification_object->reset();
+      client_data->request().Clear();
+      client_data->response().Clear();
+      client_data->error_code().clear();
+      BOOST_ASSERT_MSG( client_data->is_rpc_active() == false, 
+        "THE FLAG THAT REPRESENTS ACTIVE RPC SHOULD NOT BE SET WHEN RESETING AN OBJECT FOR RPC");
+    }
+    
+    void operator() ()
+    {
+      
+      service->dispatch(*client_cookie,*client_data.get());
+
+      client_data->end_rpc();
+
+      boost::lock_guard<boost::mutex> lock(notification_object->mutex);
+      notification_object->ready=true;
+      notification_object->cond.notify_one();
     }
 
-    bool ready;
-    boost::mutex mutex;
-    boost::condition_variable cond;
+    ClientData::shp client_data;
+    boost::shared_ptr<notification_object_> notification_object;
+    ClientCookie * client_cookie;
+    ServiceBase_shp service;
   };
 
 
@@ -124,7 +157,7 @@ TEST(backed_tests, connect_hello_list)
   b.pool_size(1);
   b.start();
 
-  ClientData_shp cd(new ClientData());
+  ClientData::shp cd(new ClientData());
 
   b.connect(cd);
 
@@ -137,8 +170,11 @@ TEST(backed_tests, connect_hello_list)
   cd->request().set_service_ordinal(0);
   cd->request().set_request_ordinal(0);
   hello.SerializeToString(cd->request().mutable_request_string());
-
   
+  synchronous_rpc_invoker invoker(cd);
+  b.synchronous_invoke(invoker); 
+
+  ASSERT_FALSE(cd->is_rpc_active()); 
 
   b.shutdown();
 }

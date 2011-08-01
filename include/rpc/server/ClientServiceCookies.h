@@ -8,18 +8,30 @@
 
 namespace rubble { namespace rpc {
   class ClientCookieBase
-  {   
+  {
   public:
     virtual ~ClientCookieBase() {}
+  private:
   };
  
   class ClientCookie
   {
   public:
     ClientCookie()
-      : m_cookie_base(NULL) {}
+      : m_cookie_base(NULL),
+        m_subscribed(false) {}
 
     ~ClientCookie() {if(m_cookie_base!=NULL) delete m_cookie_base; m_cookie_base=NULL; }
+
+    bool is_subscribed()
+    {
+      return m_subscribed;
+    }
+
+    bool subscribe()
+    {
+      m_subscribed = true;
+    }
 
     template<typename T>
     void create_cookie(T ** cookie)
@@ -46,6 +58,7 @@ namespace rubble { namespace rpc {
     }
   private:
     ClientCookieBase * m_cookie_base;
+    bool m_subscribed;
   };
   
      
@@ -60,7 +73,7 @@ namespace rubble { namespace rpc {
       COOKIE_ABSENT
     };
    
-    ~ ClientServiceCookies(){}
+    ~ ClientServiceCookies();
   
     void set_size(std::size_t sz);
     

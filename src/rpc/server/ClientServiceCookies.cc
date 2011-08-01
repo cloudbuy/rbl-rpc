@@ -76,7 +76,7 @@ namespace rubble { namespace rpc {
   void ClientServiceCookies::
   activate_service_with_ordinal(common::ordinal_type ordinal)
   { 
-    BOOST_ASSERT_MSG( !( ordinal > m_service_cookie_vector.size()-1) ,
+    BOOST_ASSERT_MSG( m_service_cookie_vector.size() > ordinal ,
       "SERVICE ORDINAL IS OUT OF RANGE, THIS SHOULD HAVE BEEN"
       " VERIFIED EARLIER");
    

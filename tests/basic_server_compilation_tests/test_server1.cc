@@ -46,7 +46,7 @@ void dispatch(int count)
 
   h1.no =  & no1;
   h2.no =  & no2;
-
+/*
   for(int i=0;i < count/2; ++i)
   {
     b.invoke(h1);
@@ -63,6 +63,7 @@ void dispatch(int count)
     h1.no->reset();
     h2.no->reset();
   }
+*/
 }
 
 int main()
