@@ -59,11 +59,14 @@ namespace rubble { namespace rpc {
       m_rpc_active = false;
     };
     bool is_rpc_active() { return m_rpc_active; } 
+    
+    void name(const std::string & name_in) { m_name = name_in; }
+    const std::string & name() { return m_name; }
   private:
     basic_protocol::ClientRequest           m_request;
     basic_protocol::ClientResponse          m_response;
 
-    std::string                             name;
+    std::string                             m_name;
     boost::system::error_code               m_ec;   
     boost::uint32_t                         m_flags;
     void *                                  m_io_object_ptr;

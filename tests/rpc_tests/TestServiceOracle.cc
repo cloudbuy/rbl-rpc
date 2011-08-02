@@ -97,36 +97,70 @@ TEST(backed_tests,teardown_fail)
 }
 
 
-
-TEST(backed_tests, connect_hello_list)
+class HelloTest : public ::testing::Test
 {
-  LocalBackEnd b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL);
-  ServiceBase::shp s(new test_service_one<test_service_one_impl>());
-  b.register_and_init_service(s);
+public:
+  HelloTest()
+    : b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL),
+      s(new test_service_one<test_service_one_impl>()),
+      cd((new ClientData())),
+      invoker(cd) {}
+  protected:
+  virtual void SetUp() 
+  {
+    b.register_and_init_service(s);
+    b.pool_size(1);
+    b.start();
+    
+    b.connect(cd);
+  }
+  virtual void TearDown()
+  {
+    b.shutdown();
+  } 
+
+  void hello_invoke()
+  {
+    hello.set_source_type( source);
+    hello.set_expected_target( destination); 
+    hello.set_node_name("test_client");
   
-  b.pool_size(1);
-  b.start();
+    cd->request().Clear(); 
+    cd->request().set_service_ordinal(0);
+    cd->request().set_request_ordinal(0);
+    hello.SerializeToString(cd->request().mutable_request_string());
+    b.invoke(invoker);
+    hres.ParseFromString(cd->response().response_string());
+  }  
+  void set_client_source(basic_protocol::SourceConnectionType s_in)
+    { source = s_in; }
+  void set_client_destination(basic_protocol::DestinationConnectionType d_in)
+    { destination = d_in; }
 
-  ClientData::shp cd(new ClientData());
+  basic_protocol::SourceConnectionType        source;
+  basic_protocol::DestinationConnectionType   destination;
 
-  b.connect(cd);
-
+  LocalBackEnd b;
+  ServiceBase::shp s;
+  ClientData::shp cd;
+  LocalBackEnd::Invoker invoker;
   basic_protocol::HelloRequest hello;
-  hello.set_source_type( basic_protocol::SOURCE_RELAY);
-  hello.set_expected_target( basic_protocol::TARGET_MARSHALL); 
-  hello.set_node_name("test_client");
+  basic_protocol::HelloResponse hres;
+};
 
-  cd->request().Clear(); 
-  cd->request().set_service_ordinal(0);
-  cd->request().set_request_ordinal(0);
-  hello.SerializeToString(cd->request().mutable_request_string());
-  
-  LocalBackEnd::Invoker invoker(cd);
-  b.invoke(invoker); 
+TEST_F(HelloTest, connect_correct_hello)
+{
+  set_client_source(basic_protocol::SOURCE_RELAY);
+  set_client_destination(basic_protocol::TARGET_MARSHALL);
 
   ASSERT_FALSE(cd->is_rpc_active()); 
+    
+  EXPECT_EQ(cd->name(), "");
 
-  b.shutdown();
+  hello_invoke();
+
+  EXPECT_EQ(cd->name() , "test_client");
+  EXPECT_EQ(hres.error_type(), basic_protocol::NO_HELLO_ERRORS);
 }
 
 #ifdef ISOLATED_GTEST_COMPILE

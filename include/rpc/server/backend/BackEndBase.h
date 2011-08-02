@@ -14,28 +14,6 @@
 
 
 namespace rubble { namespace rpc {
-  class BackEndBase;
-
-  class BasicProtocolImpl
-  {
-  public:
-    typedef ClientCookieBase t_client_cookie;
-
-    void init(boost::system::error_code & ec) {ec.clear();}
-    void teardown(boost::system::error_code & ec) {ec.clear();}
-    void Hello(ClientCookie & cc,ClientData & cd,
-      basic_protocol::HelloRequest & hr, basic_protocol::HelloResponse & hres)
-      { std::cout << hr.node_name() << std::endl;}
-    void ListServices(  ClientCookie &,ClientData &,
-      basic_protocol::ListServicesRequest & , basic_protocol::ListServicesResponse & ){}
-  
-    void backend(BackEndBase * backend)
-      { m_backend = backend; }
-  private:
-     BackEndBase * m_backend;
-  };
-  
-
   class BackEndBase
   {
   public:
@@ -52,10 +30,16 @@ namespace rubble { namespace rpc {
     bool shutdown();
    
     void connect(ClientData::shp & client_data);
-    void disconect(ClientData::shp & client_data); 
+    void disconect(ClientData::shp & client_data);
+    
+    basic_protocol::SourceConnectionType source_type() const
+      { return m_source_type;}
+    basic_protocol::DestinationConnectionType destination_type() const
+      { return m_backend_type; }
   protected:
     basic_protocol::SourceConnectionType                m_source_type;
     basic_protocol::DestinationConnectionType           m_backend_type;
+
     int                                                 m_pool_size;
     boost::thread_group                                 m_thread_group;
     boost::system::error_code                           m_ec;
@@ -69,6 +53,40 @@ namespace rubble { namespace rpc {
     boost::asio::io_service                             m_io_service;
     boost::asio::io_service::work                       m_work;
     boost::shared_mutex                                 m_mutex;
+  };
+
+  class BasicProtocolImpl
+  {
+  public:
+    typedef ClientCookieBase t_client_cookie;
+
+    void init(boost::system::error_code & ec) {ec.clear();}
+    void teardown(boost::system::error_code & ec) {ec.clear();}
+ 
+   void Hello(ClientCookie & cc,ClientData & cd,
+      basic_protocol::HelloRequest & hr, basic_protocol::HelloResponse & hres)
+    { 
+      if( m_backend->destination_type() != hr.expected_target() )
+      {
+        return;
+      }
+    
+      if( m_backend->source_type() != hr.source_type())
+      {
+        return;
+      }
+
+      cd.name(hr.node_name());
+      hres.set_error_type(basic_protocol::NO_HELLO_ERRORS);
+    }
+    void ListServices(  ClientCookie &,ClientData &,
+                        basic_protocol::ListServicesRequest & , 
+                        basic_protocol::ListServicesResponse & ){}
+  
+    void backend(BackEndBase * backend)
+      { m_backend = backend; }
+  private:
+     BackEndBase * m_backend;
   };
 
 } }
