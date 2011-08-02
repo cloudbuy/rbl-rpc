@@ -56,10 +56,10 @@ message ServiceEntry
 
 message ListServicesResponse
 {
-  repeated ServiceEntry Services =1;
+  repeated ServiceEntry services =1;
 }
 
-service BasicProtocol
+service basic_protocol
 {
   rpc Hello (HelloRequest) returns (HelloResponse);
   rpc ListServices(ListServicesRequest) returns (ListServicesResponse); 

@@ -13,8 +13,8 @@ namespace rubble { namespace rpc {
       m_service_count(0) 
 
     {
-      basic_protocol::BasicProtocol<BasicProtocolImpl> * bp =
-        new basic_protocol::BasicProtocol<BasicProtocolImpl>();
+      basic_protocol::basic_protocol<BasicProtocolImpl> * bp =
+        new basic_protocol::basic_protocol<BasicProtocolImpl>();
       bp->impl().backend(this); 
       ServiceBase::shp sb_shp(bp);
       

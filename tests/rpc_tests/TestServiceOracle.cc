@@ -246,17 +246,24 @@ protected:
     hello.SerializeToString(cd->request().mutable_request_string());
     b.invoke(invoker);
     hres.ParseFromString(cd->response().response_string());
-   
   }
+  
+  void list_invoke()
+  {
+    invoker.reset();
+    cd->request().Clear();
+    cd->request().set_service_ordinal(0);
+    cd->request().set_request_ordinal(1);
+    
+    list.SerializeToString(cd->request().mutable_request_string());
+    b.invoke(invoker);
+    lres.ParseFromString(cd->response().response_string());
+  }
+  
   virtual void TearDown()
   {
     b.shutdown();
   } 
-
-    void set_client_source(basic_protocol::SourceConnectionType s_in)
-    { source = s_in; }
-  void set_client_destination(basic_protocol::DestinationConnectionType d_in)
-    { destination = d_in; }
 
   basic_protocol::SourceConnectionType        source;
   basic_protocol::DestinationConnectionType   destination;
@@ -267,7 +274,28 @@ protected:
   LocalBackEnd::Invoker invoker;
   basic_protocol::HelloRequest hello;
   basic_protocol::HelloResponse hres;
+  
+  basic_protocol::ListServicesRequest list;
+  basic_protocol::ListServicesResponse lres;
 };
+
+TEST_F(ListTest, first_test)
+{
+  list_invoke();
+
+  EXPECT_EQ(lres.services_size(),2);
+  
+  const basic_protocol::ServiceEntry & ser_1
+    = lres.services(0);
+  const basic_protocol::ServiceEntry & ser_2
+    = lres.services(1);
+  
+  EXPECT_EQ(ser_1.service_ordinal(),0);
+  EXPECT_EQ(ser_2.service_ordinal(),1);
+
+  EXPECT_EQ(ser_1.service_name(),"basic_protocol");
+  EXPECT_EQ(ser_2.service_name(),"test_service_one");
+}
 
 
 

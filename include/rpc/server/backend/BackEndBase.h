@@ -17,6 +17,8 @@ namespace rubble { namespace rpc {
   class BackEndBase
   {
   public:
+    typedef common::OidContainer<common::Oid, ServiceBase::shp> t_services;
+
     BackEndBase(  basic_protocol::SourceConnectionType       source_type
                   ,basic_protocol::DestinationConnectionType backend_type);
 
@@ -28,7 +30,9 @@ namespace rubble { namespace rpc {
     void register_and_init_service(ServiceBase::shp service);
     void block_till_termination();
     bool shutdown();
-   
+  
+    const t_services services() const { return m_services;}
+ 
     void connect(ClientData::shp & client_data);
     void disconect(ClientData::shp & client_data);
     
@@ -46,7 +50,7 @@ namespace rubble { namespace rpc {
     ClientServiceCookies                                m_client_service_cookies;
     std::set<ClientData::shp>                           m_connected_clients;    
  
-    common::OidContainer<common::Oid, ServiceBase::shp>  m_services;
+    common::OidContainer<common::Oid, ServiceBase::shp> m_services;
     boost::uint16_t                                     m_service_count;
     bool                                                m_is_sealed;
  
@@ -90,11 +94,19 @@ namespace rubble { namespace rpc {
       hres.set_error_type(basic_protocol::NO_HELLO_ERRORS);
       cd.establish_client();
     }
-    void ListServices(  ClientCookie &,ClientData &,
-                        basic_protocol::ListServicesRequest & , 
-                        basic_protocol::ListServicesResponse & )
+    void ListServices(  ClientCookie & cc ,ClientData & cd,
+                        basic_protocol::ListServicesRequest & req, 
+                        basic_protocol::ListServicesResponse & res)
     {
-      
+      BackEndBase::t_services services = m_backend->services();
+
+      for(int i = 0; i < services.size(); ++i)
+      {
+        basic_protocol::ServiceEntry * s_e = res.add_services(); 
+        const BackEndBase::t_services::entry_type * b_s_e = services.EntryAtordinal(i);
+        s_e->set_service_ordinal( b_s_e->ordinal());
+        s_e->set_service_name( b_s_e->name().c_str());
+      } 
     }
   
     void backend(BackEndBase * backend)
