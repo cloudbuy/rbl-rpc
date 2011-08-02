@@ -1,4 +1,4 @@
-#include <rpc/server/backend/backend.h>
+#include <rpc/server/backend/BackEndBase.h>
 #include <boost/thread.hpp>
 //#include <rpc/TcpServer.h>
 #include <boost/scoped_array.hpp>
@@ -33,7 +33,7 @@ struct hello
 void dispatch(int count)
 {
   
-  BackEnd b;
+  BackEndBase b;
   
   b.pool_size(4);
   b.start();

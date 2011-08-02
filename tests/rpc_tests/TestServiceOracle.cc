@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
+#include <rpc/server/backend/LocalBackEnd.h>
 #include <rpc/server/ClientServiceCookies.h>
-#include <rpc/server/backend/backend.h>
 #include <rpc/proto/TestService-server.rblrpc.h>
 
 using namespace rubble::rpc;
@@ -58,7 +58,7 @@ using namespace rubble::rpc::test_proto;
 
 TEST(backed_tests,duplicate_identifier_fail)
 {
-  BackEnd b;
+  LocalBackEnd b;
   ServiceBase_shp s(new test_service_one<test_service_one_no_fail>());
   b.register_and_init_service(s);
 
@@ -67,7 +67,7 @@ TEST(backed_tests,duplicate_identifier_fail)
 
 TEST(backed_tests,service_innit_fail)
 {
-  BackEnd b;
+  LocalBackEnd b;
   ServiceBase_shp s(new test_service_one<test_service_one_fail>());
   
   ASSERT_THROW( b.register_and_init_service(s),BackEndException);
@@ -76,7 +76,7 @@ TEST(backed_tests,service_innit_fail)
 
 TEST(backed_tests,teardown_no_fail)
 {
-  BackEnd b;
+  LocalBackEnd b;
   ServiceBase_shp s(new test_service_one<test_service_one_dest_no_fail>());
   b.register_and_init_service(s);
   
@@ -87,7 +87,7 @@ TEST(backed_tests,teardown_no_fail)
 
 TEST(backed_tests,teardown_fail)
 {
-  BackEnd b;
+  LocalBackEnd b;
   ServiceBase_shp s(new test_service_one<test_service_one_dest_fail>());
   b.register_and_init_service(s);
   
@@ -96,61 +96,11 @@ TEST(backed_tests,teardown_fail)
   ASSERT_THROW(b.shutdown(),BackEndException);
 }
 
-  struct synchronous_rpc_invoker
-  {
-    struct notification_object_
-    {  
-      notification_object_()
-      {
-        reset();
-      }
-      void reset()
-      {
-        ready = false;
-        ec.clear();
-      }
-      bool ready;
-      boost::mutex mutex;
-      boost::condition_variable cond;
-      boost::system::error_code ec;
-    };
-
-    synchronous_rpc_invoker(ClientData::shp & cd_in)
-      : client_data(cd_in),
-        notification_object(new notification_object_()) {}
-
-    void reset()
-    {
-      notification_object->reset();
-      client_data->request().Clear();
-      client_data->response().Clear();
-      client_data->error_code().clear();
-      BOOST_ASSERT_MSG( client_data->is_rpc_active() == false, 
-        "THE FLAG THAT REPRESENTS ACTIVE RPC SHOULD NOT BE SET WHEN RESETING AN OBJECT FOR RPC");
-    }
-    
-    void operator() ()
-    {
-      
-      service->dispatch(*client_cookie,*client_data.get());
-
-      client_data->end_rpc();
-
-      boost::lock_guard<boost::mutex> lock(notification_object->mutex);
-      notification_object->ready=true;
-      notification_object->cond.notify_one();
-    }
-
-    ClientData::shp client_data;
-    boost::shared_ptr<notification_object_> notification_object;
-    ClientCookie * client_cookie;
-    ServiceBase_shp service;
-  };
 
 
 TEST(backed_tests, connect_hello_list)
 {
-  BackEnd b;
+  LocalBackEnd b;
   ServiceBase_shp s(new test_service_one<test_service_one_impl>());
   b.register_and_init_service(s);
   
@@ -171,8 +121,8 @@ TEST(backed_tests, connect_hello_list)
   cd->request().set_request_ordinal(0);
   hello.SerializeToString(cd->request().mutable_request_string());
   
-  synchronous_rpc_invoker invoker(cd);
-  b.synchronous_invoke(invoker); 
+  LocalBackEnd::Invoker invoker(cd);
+  b.invoke(invoker); 
 
   ASSERT_FALSE(cd->is_rpc_active()); 
 
