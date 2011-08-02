@@ -1,11 +1,7 @@
 #ifndef RUBBLE_RPC_SYNCHJRONOUS_LOCAL_FRONTEND_H
 #define RUBBLE_RPC_SYNCHJRONOUS_LOCAL_FRONTEND_H
-#include <rpc/server/ClientData.h>
-#include <rpc/server/ClientServiceCookies.h>
+
 #include <rpc/server/backend/BackEndBase.h>
-#include <rpc/server/ServiceOracle.h>
-#include <boost/thread.hpp>
-#include <boost/system/error_code.hpp>
 
 namespace rubble { namespace rpc {
 
@@ -65,6 +61,11 @@ namespace rubble { namespace rpc {
   public: 
     typedef local_invoker Invoker;    
 
+    LocalBackEnd(  basic_protocol::SourceConnectionType       source_type
+                  ,basic_protocol::DestinationConnectionType backend_type)
+      : BackEndBase(source_type, backend_type) {}
+
+
     template< typename Invoker>
     void invoke(Invoker & i)
     {
@@ -96,7 +97,7 @@ namespace rubble { namespace rpc {
       }
     
       { // lock_scope_lock
-        boost::lock_guard<boost::mutex> lock(m_mutex);
+        boost::shared_lock<boost::shared_mutex> lock(m_mutex);
         m_client_service_cookies.create_or_retrieve_cookie(
           request.service_ordinal(), i.client_data.get(),&i.client_cookie);
       }

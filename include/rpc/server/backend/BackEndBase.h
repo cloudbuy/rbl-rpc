@@ -39,7 +39,8 @@ namespace rubble { namespace rpc {
   class BackEndBase
   {
   public:
-    BackEndBase();
+    BackEndBase(  basic_protocol::SourceConnectionType       source_type
+                  ,basic_protocol::DestinationConnectionType backend_type);
 
     void pool_size(int pool_size_in) { m_pool_size = pool_size_in; }
     bool is_sealed() { return m_is_sealed; } 
@@ -53,6 +54,8 @@ namespace rubble { namespace rpc {
     void connect(ClientData::shp & client_data);
     void disconect(ClientData::shp & client_data); 
   protected:
+    basic_protocol::SourceConnectionType                m_source_type;
+    basic_protocol::DestinationConnectionType           m_backend_type;
     int                                                 m_pool_size;
     boost::thread_group                                 m_thread_group;
     boost::system::error_code                           m_ec;
@@ -65,7 +68,7 @@ namespace rubble { namespace rpc {
  
     boost::asio::io_service                             m_io_service;
     boost::asio::io_service::work                       m_work;
-    boost::mutex                                        m_mutex;
+    boost::shared_mutex                                 m_mutex;
   };
 
 } }

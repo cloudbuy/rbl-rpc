@@ -1,8 +1,12 @@
 #include <rpc/server/backend/BackEndBase.h>
 
 namespace rubble { namespace rpc {
-  BackEndBase::BackEndBase()      
-    : m_io_service(),
+  BackEndBase::BackEndBase( 
+    basic_protocol::SourceConnectionType       source_type,
+    basic_protocol::DestinationConnectionType backend_type) 
+    : m_source_type(source_type),
+      m_backend_type(backend_type),
+      m_io_service(),
       m_work(m_io_service),
       m_services(),
       m_is_sealed(false),
@@ -116,12 +120,12 @@ namespace rubble { namespace rpc {
 
   void BackEndBase::connect(ClientData::shp & client_data)
   {
-    boost::lock_guard<boost::mutex> lock(m_mutex);
+    boost::unique_lock<boost::shared_mutex> lock(m_mutex);
     m_connected_clients.insert(client_data);
   }
   void BackEndBase::disconect(ClientData::shp & client_data)
   {
-    boost::lock_guard<boost::mutex> lock(m_mutex);
+    boost::unique_lock<boost::shared_mutex> lock(m_mutex);
     m_connected_clients.erase(client_data);
   }
 
