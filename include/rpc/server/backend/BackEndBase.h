@@ -88,10 +88,14 @@ namespace rubble { namespace rpc {
 
       cd.name(hr.node_name());
       hres.set_error_type(basic_protocol::NO_HELLO_ERRORS);
+      cd.establish_client();
     }
     void ListServices(  ClientCookie &,ClientData &,
                         basic_protocol::ListServicesRequest & , 
-                        basic_protocol::ListServicesResponse & ){}
+                        basic_protocol::ListServicesResponse & )
+    {
+      
+    }
   
     void backend(BackEndBase * backend)
       { m_backend = backend; }

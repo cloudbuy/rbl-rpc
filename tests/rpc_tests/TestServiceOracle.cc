@@ -164,6 +164,28 @@ TEST_F(HelloTest, connect_correct_hello)
   EXPECT_EQ(hres.error_type(), basic_protocol::NO_HELLO_ERRORS);
   EXPECT_FALSE(cd->error_code());
   EXPECT_FALSE(cd->should_disconect() );
+  EXPECT_TRUE(cd->is_client_established());
+}
+
+TEST_F(HelloTest, connect_multiple_hello)
+{
+  set_client_source(basic_protocol::SOURCE_RELAY);
+  set_client_destination(basic_protocol::TARGET_MARSHALL);
+
+  ASSERT_FALSE(cd->is_rpc_active()); 
+    
+  EXPECT_EQ(cd->name(), "");
+
+  hello_invoke();
+  hello_invoke();
+
+//  EXPECT_EQ(hres.error_type(), basic_protocol::NO_HELLO_ERRORS);
+  EXPECT_TRUE(cd->error_code());
+  EXPECT_EQ(cd->error_code().value(), error_codes::RBL_BACKEND_ALLREADY_ESTABLISHED);
+
+  EXPECT_TRUE(cd->should_disconect() );
+  EXPECT_TRUE(cd->is_client_established());
+  EXPECT_EQ(hres.error_type(), basic_protocol::CLIENT_ALLREADY_ESTABLISHED);
 }
 
 TEST_F(HelloTest, connect_incorect_source_hello)
@@ -176,6 +198,7 @@ TEST_F(HelloTest, connect_incorect_source_hello)
   EXPECT_EQ(hres.error_type(), basic_protocol::SOURCE_EXPECTATION_MISMATCH);
   EXPECT_EQ(cd->error_code().value(), error_codes::RBL_BACKEND_CLIENT_SOURCE_TYPE_MISMATCH);
   EXPECT_TRUE(cd->should_disconect() );
+  EXPECT_FALSE(cd->is_client_established());
 }
 
 TEST_F(HelloTest, connect_incorect_destination_hello)
@@ -188,7 +211,64 @@ TEST_F(HelloTest, connect_incorect_destination_hello)
   EXPECT_EQ(hres.error_type(), basic_protocol::DESTINATION_EXPECTATION_MISMATCH);
   EXPECT_EQ(cd->error_code().value(), error_codes::RBL_BACKEND_CLIENT_TARGET_TYPE_MISMATCH);
   EXPECT_TRUE(cd->should_disconect() );
+  EXPECT_FALSE(cd->is_client_established());
+
 }
+
+class ListTest : public ::testing::Test
+{
+public:
+  ListTest()
+    : b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL),
+      s(new test_service_one<test_service_one_impl>()),
+      cd((new ClientData())),
+      invoker(cd) {}
+protected:
+
+  virtual void SetUp() 
+  {
+    source = basic_protocol::SOURCE_RELAY;
+    destination = basic_protocol::TARGET_MARSHALL;
+
+    b.register_and_init_service(s);
+    b.pool_size(1);
+    b.start();
+    
+    b.connect(cd);
+  
+    hello.set_source_type( source);
+    hello.set_expected_target( destination); 
+    hello.set_node_name("test_client");
+  
+    cd->request().Clear(); 
+    cd->request().set_service_ordinal(0);
+    cd->request().set_request_ordinal(0);
+    hello.SerializeToString(cd->request().mutable_request_string());
+    b.invoke(invoker);
+    hres.ParseFromString(cd->response().response_string());
+   
+  }
+  virtual void TearDown()
+  {
+    b.shutdown();
+  } 
+
+    void set_client_source(basic_protocol::SourceConnectionType s_in)
+    { source = s_in; }
+  void set_client_destination(basic_protocol::DestinationConnectionType d_in)
+    { destination = d_in; }
+
+  basic_protocol::SourceConnectionType        source;
+  basic_protocol::DestinationConnectionType   destination;
+
+  LocalBackEnd b;
+  ServiceBase::shp s;
+  ClientData::shp cd;
+  LocalBackEnd::Invoker invoker;
+  basic_protocol::HelloRequest hello;
+  basic_protocol::HelloResponse hres;
+};
+
 
 
 #ifdef ISOLATED_GTEST_COMPILE
