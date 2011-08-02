@@ -59,7 +59,7 @@ using namespace rubble::rpc::test_proto;
 TEST(backed_tests,duplicate_identifier_fail)
 {
   LocalBackEnd b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL);
-  ServiceBase_shp s(new test_service_one<test_service_one_no_fail>());
+  ServiceBase::shp s(new test_service_one<test_service_one_no_fail>());
   b.register_and_init_service(s);
 
   ASSERT_THROW( b.register_and_init_service(s),BackEndException);
@@ -68,7 +68,7 @@ TEST(backed_tests,duplicate_identifier_fail)
 TEST(backed_tests,service_innit_fail)
 {
   LocalBackEnd b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL);
-  ServiceBase_shp s(new test_service_one<test_service_one_fail>());
+  ServiceBase::shp s(new test_service_one<test_service_one_fail>());
   
   ASSERT_THROW( b.register_and_init_service(s),BackEndException);
 
@@ -77,7 +77,7 @@ TEST(backed_tests,service_innit_fail)
 TEST(backed_tests,teardown_no_fail)
 {
   LocalBackEnd b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL);
-  ServiceBase_shp s(new test_service_one<test_service_one_dest_no_fail>());
+  ServiceBase::shp s(new test_service_one<test_service_one_dest_no_fail>());
   b.register_and_init_service(s);
   
   b.pool_size(1);
@@ -88,7 +88,7 @@ TEST(backed_tests,teardown_no_fail)
 TEST(backed_tests,teardown_fail)
 {
   LocalBackEnd b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL);
-  ServiceBase_shp s(new test_service_one<test_service_one_dest_fail>());
+  ServiceBase::shp s(new test_service_one<test_service_one_dest_fail>());
   b.register_and_init_service(s);
   
   b.pool_size(1);
@@ -101,7 +101,7 @@ TEST(backed_tests,teardown_fail)
 TEST(backed_tests, connect_hello_list)
 {
   LocalBackEnd b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL);
-  ServiceBase_shp s(new test_service_one<test_service_one_impl>());
+  ServiceBase::shp s(new test_service_one<test_service_one_impl>());
   b.register_and_init_service(s);
   
   b.pool_size(1);

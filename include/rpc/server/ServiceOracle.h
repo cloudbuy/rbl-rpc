@@ -9,6 +9,8 @@ namespace rubble { namespace rpc {
   class ServiceBase
   {
   public:
+    typedef boost::shared_ptr<ServiceBase> shp;
+
     virtual void init(boost::system::error_code & ec) =0;
     virtual void teardown(boost::system::error_code & ec)=0;
     virtual bool contains_function_at_ordinal(boost::uint16_t ordinal) = 0;
@@ -32,8 +34,7 @@ namespace rubble { namespace rpc {
   private:
   };
 */
-   typedef boost::shared_ptr<ServiceBase> ServiceBase_shp;
-
+   
  
 } } 
 

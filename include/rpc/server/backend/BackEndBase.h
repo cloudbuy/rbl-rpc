@@ -47,7 +47,7 @@ namespace rubble { namespace rpc {
     void seal() { m_is_sealed = true;}
    
     void start();
-    void register_and_init_service(ServiceBase_shp service);
+    void register_and_init_service(ServiceBase::shp service);
     void block_till_termination();
     bool shutdown();
    
@@ -62,7 +62,7 @@ namespace rubble { namespace rpc {
     ClientServiceCookies                                m_client_service_cookies;
     std::set<ClientData::shp>                           m_connected_clients;    
  
-    common::OidContainer<common::Oid, ServiceBase_shp>  m_services;
+    common::OidContainer<common::Oid, ServiceBase::shp>  m_services;
     boost::uint16_t                                     m_service_count;
     bool                                                m_is_sealed;
  

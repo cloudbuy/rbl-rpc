@@ -53,7 +53,7 @@ namespace rubble { namespace rpc {
     ClientData::shp client_data;
     boost::shared_ptr<notification_object_> notification_object;
     ClientCookie * client_cookie;
-    ServiceBase_shp service;
+    ServiceBase::shp service;
   };
 
   class LocalBackEnd : public BackEndBase
@@ -73,7 +73,7 @@ namespace rubble { namespace rpc {
 
       basic_protocol::ClientRequest & request = i.client_data->request();
  
-      ServiceBase_shp * service = 
+      ServiceBase::shp * service = 
         m_services[request.service_ordinal()];
       // check if service with ordinal exists
       if(service == NULL)

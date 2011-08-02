@@ -16,7 +16,7 @@ namespace rubble { namespace rpc {
       basic_protocol::BasicProtocol<BasicProtocolImpl> * bp =
         new basic_protocol::BasicProtocol<BasicProtocolImpl>();
       bp->impl().backend(this); 
-      ServiceBase_shp sb_shp(bp);
+      ServiceBase::shp sb_shp(bp);
       
       register_and_init_service(sb_shp);
     }
@@ -49,7 +49,7 @@ namespace rubble { namespace rpc {
     }
   }
   
-  void BackEndBase::register_and_init_service(ServiceBase_shp service)
+  void BackEndBase::register_and_init_service(ServiceBase::shp service)
   {
     if(!m_is_sealed)
     {
@@ -92,7 +92,7 @@ namespace rubble { namespace rpc {
 
     for(int i=0;i<m_services.occupied_size();++i)
     {
-      ServiceBase_shp * sb_shp = m_services[i];
+      ServiceBase::shp * sb_shp = m_services[i];
       if(sb_shp)
       {
         (*sb_shp)->teardown(m_ec);
