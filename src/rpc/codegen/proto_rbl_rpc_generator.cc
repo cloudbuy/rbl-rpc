@@ -98,7 +98,7 @@ namespace {
     gen_out.Outdent();
     gen_out.Print("}\n");    
 
-    gen_out.Print("virtual bool dispatch(ClientCookie & client_cookie,ClientData & cd)\n");
+    gen_out.Print("virtual void dispatch(ClientCookie & client_cookie,ClientData & cd)\n");
     gen_out.Print("{\n");
     gen_out.Indent();
     {
@@ -192,15 +192,12 @@ void create_client_service( Printer & gen_out, const ServiceDescriptor * sd)
         map["MN"] = sd->method(i)->name();
         map["IP"] = sd->method(i)->input_type()->name();
         map["OP"] = sd->method(i)->output_type()->name();
-        gen_out.Print(map,"bool $MN$(const $IP$ & req, $OP$ & res)\n{\n");
+        gen_out.Print(map,"void $MN$(const $IP$ & req, $OP$ & res)\n{\n");
         gen_out.Indent();
           gen_out.Print("static const boost::uint16_t method_id = $I$;\n","I", boost::lexical_cast<std::string>(i));
           gen_out.Print("m_client_request.set_request_ordinal( * m_service_method_map[method_id]);\n");
           gen_out.Print("req.SerializeToString(m_client_request.mutable_request_string());\n\n");
-          gen_out.Print("if(! dispatch())\n");
-          gen_out.Indent();
-            gen_out.Print("throw \"dispatch failed\";\n\n");
-          gen_out.Outdent();
+          gen_out.Print("dispatch()");
 // Don't need the following, the request and response objects are distinct
 //          gen_out.Print("if( !res.ParseFromString( m_client_request.response_string()))\n");
 //          gen_out.Indent();

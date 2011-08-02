@@ -28,7 +28,7 @@ namespace rubble { namespace rpc {
       return m_subscribed;
     }
 
-    bool subscribe()
+    void subscribe()
     {
       m_subscribed = true;
     }

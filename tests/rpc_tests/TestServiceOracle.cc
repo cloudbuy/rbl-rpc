@@ -12,7 +12,7 @@ using namespace rubble::rpc::test_proto;
     typedef ClientCookieBase t_client_cookie;
     void init(boost::system::error_code & ec) { ec.clear(); }
     void teardown(boost::system::error_code & ec) {}
-    bool dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & ){}
+    void dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & ){}
   private:
   };
 
@@ -22,7 +22,7 @@ using namespace rubble::rpc::test_proto;
     typedef ClientCookieBase t_client_cookie;
     void init(boost::system::error_code & ec) { ec.assign(1,rpc_backend_error); }
     void teardown(boost::system::error_code & ec) {}
-    bool dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & ){}
+    void dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & ){}
   private:
   };
 
@@ -32,7 +32,7 @@ using namespace rubble::rpc::test_proto;
     typedef ClientCookieBase t_client_cookie;
     void init(boost::system::error_code & ec) { ec.clear(); }
     void teardown(boost::system::error_code & ec) {ec.clear();}
-    bool dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & ){}
+    void dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & ){}
   private:
   };
 
@@ -42,7 +42,7 @@ using namespace rubble::rpc::test_proto;
     typedef ClientCookieBase t_client_cookie;
     void init(boost::system::error_code & ec) { ec.clear(); }
     void teardown(boost::system::error_code & ec) { ec.assign(1,rpc_backend_error); }
-    bool dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & ){}
+    void dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & ){}
   private:
   };
 
@@ -52,7 +52,7 @@ using namespace rubble::rpc::test_proto;
     typedef ClientCookieBase t_client_cookie;
     void init(boost::system::error_code & ec) { ec.clear(); }
     void teardown(boost::system::error_code & ec) { ec.clear(); }
-    bool dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & ){}
+    void dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & ){}
   private:
   };
 

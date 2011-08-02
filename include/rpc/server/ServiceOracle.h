@@ -12,7 +12,7 @@ namespace rubble { namespace rpc {
     virtual void init(boost::system::error_code & ec) =0;
     virtual void teardown(boost::system::error_code & ec)=0;
     virtual bool contains_function_at_ordinal(boost::uint16_t ordinal) = 0;
-    virtual bool dispatch(ClientCookie & client_cookie, ClientData & cd)=0;
+    virtual void dispatch(ClientCookie & client_cookie, ClientData & cd)=0;
     virtual const char * name() = 0;
     virtual ~ServiceBase(){};
     

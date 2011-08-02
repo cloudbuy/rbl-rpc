@@ -23,10 +23,10 @@ namespace rubble { namespace rpc {
 
     void init(boost::system::error_code & ec) {ec.clear();}
     void teardown(boost::system::error_code & ec) {ec.clear();}
-    bool Hello(ClientCookie & cc,ClientData & cd,
+    void Hello(ClientCookie & cc,ClientData & cd,
       basic_protocol::HelloRequest & hr, basic_protocol::HelloResponse & hres)
       { std::cout << hr.node_name() << std::endl;}
-    bool ListServices(  ClientCookie &,ClientData &,
+    void ListServices(  ClientCookie &,ClientData &,
       basic_protocol::ListServicesRequest & , basic_protocol::ListServicesResponse & ){}
   
     void backend(BackEndBase * backend)
