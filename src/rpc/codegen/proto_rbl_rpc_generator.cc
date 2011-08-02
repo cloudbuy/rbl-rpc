@@ -245,7 +245,7 @@ class RblRpcGenerator : public CppGenerator
 
       gen_out.Print("#include \"$incl$\" \n","incl", pbuf_name);
       gen_out.Print("#include <$incl$> \n","incl", "rpc/server/ClientServiceCookies.h");
-      gen_out.Print("#include <$incl$> \n","incl", "rpc/server/ServiceOracle.h");
+      gen_out.Print("#include <$incl$> \n","incl", "rpc/server/ServiceBase.h");
       gen_out.Print("#include <$incl$> \n","incl", "rpc/common/rpc_errors.h");
       gen_out.Print("#include <$incl$> \n","incl", "boost/cstdint.hpp");
       gen_out.Print("#include <$incl$> \n\n","incl", "boost/type_traits/is_same.hpp");
