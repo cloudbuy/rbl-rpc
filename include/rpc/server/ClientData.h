@@ -37,14 +37,14 @@ namespace rubble { namespace rpc {
 
     ClientData() 
       : m_flags(0),
-        m_rpc_active(false) {}
+        m_rpc_active(false),
+        m_should_disconect(false)  {}
 
     
     boost::uint32_t & flags() { return m_flags; }
     
     basic_protocol::ClientRequest & request() { return m_request; }
     basic_protocol::ClientResponse & response() { return m_response;  }
-    boost::system::error_code & error_code() { return m_ec; }
 
     void start_rpc() 
     { 
@@ -62,6 +62,16 @@ namespace rubble { namespace rpc {
     
     void name(const std::string & name_in) { m_name = name_in; }
     const std::string & name() { return m_name; }
+
+    void error_code(boost::system::error_code & ec)
+      { m_ec = ec; }
+    boost::system::error_code & error_code()
+      { return m_ec; }
+
+    void request_disconect()
+      { m_should_disconect = true;}
+    bool should_disconect()
+      { return m_should_disconect; }
   private:
     basic_protocol::ClientRequest           m_request;
     basic_protocol::ClientResponse          m_response;
@@ -71,6 +81,7 @@ namespace rubble { namespace rpc {
     boost::uint32_t                         m_flags;
     void *                                  m_io_object_ptr;
     bool                                    m_rpc_active;
+    bool                                    m_should_disconect;
   };
 } }
 #endif

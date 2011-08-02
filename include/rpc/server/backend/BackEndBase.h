@@ -68,11 +68,21 @@ namespace rubble { namespace rpc {
     { 
       if( m_backend->destination_type() != hr.expected_target() )
       {
+        cd.error_code().assign(
+          error_codes::RBL_BACKEND_CLIENT_TARGET_TYPE_MISMATCH,
+          rpc_backend_error);
+        cd.request_disconect();
+        hres.set_error_type(basic_protocol::DESTINATION_EXPECTATION_MISMATCH);
         return;
       }
     
       if( m_backend->source_type() != hr.source_type())
       {
+        cd.error_code().assign(
+          error_codes::RBL_BACKEND_CLIENT_SOURCE_TYPE_MISMATCH,
+          rpc_backend_error);
+        hres.set_error_type(basic_protocol::SOURCE_EXPECTATION_MISMATCH);
+        cd.request_disconect();
         return;
       }
 

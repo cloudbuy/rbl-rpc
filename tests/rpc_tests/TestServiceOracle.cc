@@ -160,8 +160,36 @@ TEST_F(HelloTest, connect_correct_hello)
   hello_invoke();
 
   EXPECT_EQ(cd->name() , "test_client");
+
   EXPECT_EQ(hres.error_type(), basic_protocol::NO_HELLO_ERRORS);
+  EXPECT_FALSE(cd->error_code());
+  EXPECT_FALSE(cd->should_disconect() );
 }
+
+TEST_F(HelloTest, connect_incorect_source_hello)
+{
+  set_client_source(basic_protocol::SOURCE_GENERATOR);
+  set_client_destination(basic_protocol::TARGET_MARSHALL);
+
+  hello_invoke();
+
+  EXPECT_EQ(hres.error_type(), basic_protocol::SOURCE_EXPECTATION_MISMATCH);
+  EXPECT_EQ(cd->error_code().value(), error_codes::RBL_BACKEND_CLIENT_SOURCE_TYPE_MISMATCH);
+  EXPECT_TRUE(cd->should_disconect() );
+}
+
+TEST_F(HelloTest, connect_incorect_destination_hello)
+{
+  set_client_source(basic_protocol::SOURCE_RELAY);
+  set_client_destination(basic_protocol::TARGET_RELAY);
+
+  hello_invoke();
+
+  EXPECT_EQ(hres.error_type(), basic_protocol::DESTINATION_EXPECTATION_MISMATCH);
+  EXPECT_EQ(cd->error_code().value(), error_codes::RBL_BACKEND_CLIENT_TARGET_TYPE_MISMATCH);
+  EXPECT_TRUE(cd->should_disconect() );
+}
+
 
 #ifdef ISOLATED_GTEST_COMPILE
 int main(int argc,char ** argv)
