@@ -67,7 +67,7 @@ namespace rubble { namespace rpc {
     void init(boost::system::error_code & ec) {ec.clear();}
     void teardown(boost::system::error_code & ec) {ec.clear();}
  
-   void Hello(ClientCookie & cc,ClientData & cd,
+   void hello(ClientCookie & cc,ClientData & cd,
       basic_protocol::HelloRequest & hr, basic_protocol::HelloResponse & hres)
     { 
       if( m_backend->destination_type() != hr.expected_target() )
@@ -94,7 +94,7 @@ namespace rubble { namespace rpc {
       hres.set_error_type(basic_protocol::NO_HELLO_ERRORS);
       cd.establish_client();
     }
-    void ListServices(  ClientCookie & cc ,ClientData & cd,
+    void list_services(  ClientCookie & cc ,ClientData & cd,
                         basic_protocol::ListServicesRequest & req, 
                         basic_protocol::ListServicesResponse & res)
     {
@@ -108,7 +108,15 @@ namespace rubble { namespace rpc {
         s_e->set_service_name( b_s_e->name().c_str());
       } 
     }
-  
+    void subscribe(ClientCookie & client_cookie, ClientData & cd) {}
+    void unsubscribe(ClientCookie & client_cookie, ClientData & cd) {}
+
+    void rpc_subscribe_service( ClientCookie & cc,ClientData & cd,
+                                basic_protocol::SubscribeServiceRequest & req,
+                                basic_protocol::SubscribeServiceResponse & res)
+    {
+    }
+
     void backend(BackEndBase * backend)
       { m_backend = backend; }
   private:

@@ -12,6 +12,8 @@ using namespace rubble::rpc::test_proto;
     typedef ClientCookieBase t_client_cookie;
     void init(boost::system::error_code & ec) { ec.clear(); }
     void teardown(boost::system::error_code & ec) {}
+    void subscribe(ClientCookie & client_cookie, ClientData & cd) {}
+    void unsubscribe(ClientCookie & client_cookie, ClientData & cd) {}
     void dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & ){}
   private:
   };
@@ -22,6 +24,8 @@ using namespace rubble::rpc::test_proto;
     typedef ClientCookieBase t_client_cookie;
     void init(boost::system::error_code & ec) { ec.assign(1,rpc_backend_error); }
     void teardown(boost::system::error_code & ec) {}
+    void subscribe(ClientCookie & client_cookie, ClientData & cd) {}
+    void unsubscribe(ClientCookie & client_cookie, ClientData & cd) {}
     void dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & ){}
   private:
   };
@@ -32,6 +36,8 @@ using namespace rubble::rpc::test_proto;
     typedef ClientCookieBase t_client_cookie;
     void init(boost::system::error_code & ec) { ec.clear(); }
     void teardown(boost::system::error_code & ec) {ec.clear();}
+    void subscribe(ClientCookie & client_cookie, ClientData & cd) {}
+    void unsubscribe(ClientCookie & client_cookie, ClientData & cd) {}
     void dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & ){}
   private:
   };
@@ -42,6 +48,8 @@ using namespace rubble::rpc::test_proto;
     typedef ClientCookieBase t_client_cookie;
     void init(boost::system::error_code & ec) { ec.clear(); }
     void teardown(boost::system::error_code & ec) { ec.assign(1,rpc_backend_error); }
+    void subscribe(ClientCookie & client_cookie, ClientData & cd) {}
+    void unsubscribe(ClientCookie & client_cookie, ClientData & cd) {}
     void dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & ){}
   private:
   };
@@ -52,6 +60,8 @@ using namespace rubble::rpc::test_proto;
     typedef ClientCookieBase t_client_cookie;
     void init(boost::system::error_code & ec) { ec.clear(); }
     void teardown(boost::system::error_code & ec) { ec.clear(); }
+    void subscribe(ClientCookie & client_cookie, ClientData & cd) {}
+    void unsubscribe(ClientCookie & client_cookie, ClientData & cd) {}
     void dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & ){}
   private:
   };
@@ -95,7 +105,6 @@ TEST(backed_tests,teardown_fail)
   b.start();
   ASSERT_THROW(b.shutdown(),BackEndException);
 }
-
 
 class HelloTest : public ::testing::Test
 {
@@ -213,6 +222,78 @@ TEST_F(HelloTest, connect_incorect_destination_hello)
   EXPECT_TRUE(cd->should_disconect() );
   EXPECT_FALSE(cd->is_client_established());
 
+}
+class MissingIdTest : public ::testing::Test
+{
+public:
+  MissingIdTest()
+    : b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL),
+      s(new test_service_one<test_service_one_impl>()),
+      cd((new ClientData())),
+      invoker(cd) {}
+protected:
+
+  virtual void SetUp() 
+  {
+    source = basic_protocol::SOURCE_RELAY;
+    destination = basic_protocol::TARGET_MARSHALL;
+
+    b.register_and_init_service(s);
+    b.pool_size(1);
+    b.start();
+    
+    b.connect(cd);
+  
+    hello.set_source_type( source);
+    hello.set_expected_target( destination); 
+    hello.set_node_name("test_client");
+  
+    cd->request().Clear(); 
+    cd->request().set_service_ordinal(0);
+    cd->request().set_request_ordinal(0);
+    hello.SerializeToString(cd->request().mutable_request_string());
+    b.invoke(invoker);
+    hres.ParseFromString(cd->response().response_string());
+  }
+  
+  void method_test()
+  {
+      }
+
+  void service_test()  
+  {
+    cd->request().Clear();
+    cd->request().set_service_ordinal(3);
+    cd->request().set_request_ordinal(0);
+    b.invoke(invoker);
+  }
+ 
+  virtual void TearDown()
+  {
+    b.shutdown();
+  } 
+
+  basic_protocol::SourceConnectionType        source;
+  basic_protocol::DestinationConnectionType   destination;
+
+  LocalBackEnd b;
+  ServiceBase::shp s;
+  ClientData::shp cd;
+  LocalBackEnd::Invoker invoker;
+  basic_protocol::HelloRequest hello;
+  basic_protocol::HelloResponse hres;
+  
+  basic_protocol::ListServicesRequest list;
+  basic_protocol::ListServicesResponse lres;
+};
+
+TEST_F(MissingIdTest, missing_service_test)
+{
+  service_test(); 
+}
+
+TEST_F(MissingIdTest, missing_method_test)
+{
 }
 
 class ListTest : public ::testing::Test
