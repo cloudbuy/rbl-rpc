@@ -31,7 +31,7 @@ namespace rubble { namespace rpc {
     void block_till_termination();
     bool shutdown();
   
-    const t_services services() const { return m_services;}
+    const t_services & services() const { return m_services;}
  
     void connect(ClientData::shp & client_data);
     void disconect(ClientData::shp & client_data);
@@ -115,6 +115,15 @@ namespace rubble { namespace rpc {
                                 basic_protocol::SubscribeServiceRequest & req,
                                 basic_protocol::SubscribeServiceResponse & res)
     {
+      BackEndBase::t_services services = m_backend->services();
+      
+      if( !( req.service_ordinal() < services.size()))
+      {
+        cd.error_code().assign( 
+          error_codes::RBL_BACKEND_SUBSCRIBE_NO_SERVICE_WITH_ORDINAL,
+          rpc_backend_error);
+        res.set_error(basic_protocol::SERVICE_ORDINAL_NOT_IN_USE);
+      }
     }
 
     void backend(BackEndBase * backend)

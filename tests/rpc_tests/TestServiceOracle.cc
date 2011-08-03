@@ -223,6 +223,7 @@ TEST_F(HelloTest, connect_incorect_destination_hello)
   EXPECT_FALSE(cd->is_client_established());
 
 }
+
 class MissingIdTest : public ::testing::Test
 {
 public:
@@ -258,10 +259,17 @@ protected:
   
   void method_test()
   {
-      }
+    invoker.reset();
+    cd->request().Clear();
+    cd->request().set_service_ordinal(1);
+    cd->request().set_request_ordinal(5);
+    b.invoke(invoker);
+
+  }
 
   void service_test()  
   {
+    invoker.reset();
     cd->request().Clear();
     cd->request().set_service_ordinal(3);
     cd->request().set_request_ordinal(0);
@@ -289,11 +297,15 @@ protected:
 
 TEST_F(MissingIdTest, missing_service_test)
 {
-  service_test(); 
+  service_test();
+  EXPECT_EQ(cd->error_code().value(), error_codes::RBL_BACKEND_INVOKE_NO_SERVICE_WITH_ORDINAL_ERROR); 
 }
 
 TEST_F(MissingIdTest, missing_method_test)
 {
+  method_test();
+  EXPECT_EQ(cd->error_code().value(), error_codes::RBL_BACKEND_INVOKE_NO_REQUEST_WITH_ORDINAL_ERROR); 
+
 }
 
 class ListTest : public ::testing::Test
@@ -378,7 +390,87 @@ TEST_F(ListTest, first_test)
   EXPECT_EQ(ser_2.service_name(),"test_service_one");
 }
 
+class SubscribeTests : public ::testing::Test
+{
+public:
+  SubscribeTests()
+    : b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL),
+      s(new test_service_one<test_service_one_impl>()),
+      cd((new ClientData())),
+      invoker(cd) {}
+protected:
 
+  virtual void SetUp() 
+  {
+    source = basic_protocol::SOURCE_RELAY;
+    destination = basic_protocol::TARGET_MARSHALL;
+
+    b.register_and_init_service(s);
+    b.pool_size(1);
+    b.start();
+    
+    b.connect(cd);
+  
+    hello.set_source_type( source);
+    hello.set_expected_target( destination); 
+    hello.set_node_name("test_client");
+  
+    cd->request().Clear(); 
+    cd->request().set_service_ordinal(0);
+    cd->request().set_request_ordinal(0);
+    hello.SerializeToString(cd->request().mutable_request_string());
+    b.invoke(invoker);
+    hres.ParseFromString(cd->response().response_string());
+  }
+  
+  virtual void TearDown()
+  {
+    b.shutdown();
+  } 
+
+ 
+  basic_protocol::SourceConnectionType        source;
+  basic_protocol::DestinationConnectionType   destination;
+
+  LocalBackEnd b;
+  ServiceBase::shp s;
+  ClientData::shp cd;
+  LocalBackEnd::Invoker invoker;
+  basic_protocol::HelloRequest hello;
+  basic_protocol::HelloResponse hres;
+};
+
+TEST_F(SubscribeTests, unscribed_error)
+{
+  invoker.reset();
+  cd->request().Clear(); 
+  cd->request().set_service_ordinal(1);
+  cd->request().set_request_ordinal(0);
+  b.invoke(invoker);
+  EXPECT_EQ(cd->error_code().value(), error_codes::RBL_BACKEND_INVOKE_CLIENT_UNSUBSCRIBED);
+}
+
+TEST_F(SubscribeTests, subscribe_out_of_range_error)
+{
+  basic_protocol::SubscribeServiceRequest req;
+  basic_protocol::SubscribeServiceResponse res;
+
+  invoker.reset();
+
+  req.set_service_ordinal(2);
+
+  cd->request().Clear();
+  cd->request().set_service_ordinal(0);
+  cd->request().set_request_ordinal(2);
+  req.SerializeToString(cd->request().mutable_request_string());
+  
+
+  b.invoke(invoker); 
+  
+  res.ParseFromString(cd->response().response_string());
+  EXPECT_EQ(cd->error_code().value(),error_codes::RBL_BACKEND_SUBSCRIBE_NO_SERVICE_WITH_ORDINAL);
+  EXPECT_EQ(res.error(), basic_protocol::SERVICE_ORDINAL_NOT_IN_USE);
+}
 
 #ifdef ISOLATED_GTEST_COMPILE
 int main(int argc,char ** argv)

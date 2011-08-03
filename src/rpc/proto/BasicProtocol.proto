@@ -62,12 +62,13 @@ message ListServicesResponse
 
 message SubscribeServiceRequest
 {
-    
+  required uint32 service_ordinal = 1;    
 }
 
 enum ServiceSubscribeErrorType
 {
   NO_SUBSCRIBE_SERVICE_ERROR = 0;
+  SERVICE_ORDINAL_NOT_IN_USE = 1;
 }
 
 message SubscribeServiceResponse
