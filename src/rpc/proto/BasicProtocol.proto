@@ -70,6 +70,7 @@ enum ServiceSubscribeErrorType
 {
   NO_SUBSCRIBE_SERVICE_ERROR = 0;
   SERVICE_ORDINAL_NOT_IN_USE = 1;
+  SERVICE_ALLREADY_SUBSCRIBED =2;
 }
 
 message SubscribeServiceResponse

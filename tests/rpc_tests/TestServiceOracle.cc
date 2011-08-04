@@ -452,7 +452,7 @@ TEST_F(SubscribeTests, unsubscribed_error)
   cd->request().set_service_ordinal(1);
   cd->request().set_request_ordinal(0);
   b.invoke(invoker);
-  EXPECT_EQ(cd->error_code().value(), error_codes::RBL_BACKEND_INVOKE_CLIENT_UNSUBSCRIBED);
+  EXPECT_EQ(cd->error_code().value(), error_codes::RBL_BACKEND_INVOKE_CLIENT_NOT_SUBSCRIBED);
 }
 
 TEST_F(SubscribeTests, subscribe_out_of_range_error)

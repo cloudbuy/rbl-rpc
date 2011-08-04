@@ -32,6 +32,8 @@ namespace rubble { namespace rpc {
     bool shutdown();
   
     const t_services & services() const { return m_services;}
+    ClientServiceCookies & cookies() { return m_client_service_cookies; }
+    boost::shared_mutex & mutex() { return m_mutex; }
  
     void connect(ClientData::shp & client_data);
     void disconect(ClientData::shp & client_data);
@@ -115,7 +117,7 @@ namespace rubble { namespace rpc {
     void rpc_subscribe_service( ClientCookie & cc,ClientData & cd,
                                 basic_protocol::SubscribeServiceRequest & req,
                                 basic_protocol::SubscribeServiceResponse & res)
-    {
+    { 
       BackEndBase::t_services services = m_backend->services();
       
       if( !( req.service_ordinal() < services.size()))
@@ -124,7 +126,42 @@ namespace rubble { namespace rpc {
           error_codes::RBL_BACKEND_SUBSCRIBE_NO_SERVICE_WITH_ORDINAL,
           rpc_backend_error);
         res.set_error(basic_protocol::SERVICE_ORDINAL_NOT_IN_USE);
+        return;
       }
+
+      ClientServiceCookies cookies = m_backend->cookies(); 
+      ClientCookie * cookie;
+      { 
+        boost::unique_lock<boost::shared_mutex> lock(m_backend->mutex());
+        cookies.create_or_retrieve_cookie(
+          req.service_ordinal(), &cd, &cookie);
+      }
+      
+      //subcription should only occur once
+      if(cookie->is_subscribed())
+      {
+        cd.error_code().assign(
+          error_codes::RBL_BACKEND_ALLREADY_SUBSCRIBED,
+          rpc_backend_error);
+        res.set_error(basic_protocol::SERVICE_ALLREADY_SUBSCRIBED);
+        return;
+      } 
+
+      ServiceBase::shp * s = services[req.service_ordinal()];
+
+      BOOST_ASSERT_MSG(s != NULL, 
+      "THERE SHOULD BE A SERVICE IN THE CONTEXT OF A " 
+      "CLIENT-SERVICE-SUBSCRIPTION");
+      
+      std::string * req_s = NULL;  
+      if(req.has_subscribe_request_string())
+        req_s = req.mutable_subscribe_request_string();
+ 
+      std::string * res_s = NULL;
+      if(res.has_subscribe_result_string())
+        res_s = res.mutable_subscribe_result_string();
+      
+      (*s)->subscribe (*cookie,cd,req_s,res_s);
     }
 
     void backend(BackEndBase * backend)
