@@ -166,7 +166,12 @@ namespace rubble { namespace rpc {
         res.mutable_subscribe_result_string();
       
       (*s)->subscribe (*cookie,cd,req_s,res_s);
-      res.set_error(basic_protocol::NO_SUBSCRIBE_SERVICE_ERROR);
+
+      if(!cd.error_code())
+      {
+        cookie->subscribe();
+        res.set_error(basic_protocol::NO_SUBSCRIBE_SERVICE_ERROR);
+      }
     }
 
     void backend(BackEndBase * backend)

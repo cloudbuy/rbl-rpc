@@ -506,7 +506,45 @@ TEST_F(SubscribeTests, subscribe_test)
   EXPECT_EQ(res.error(),basic_protocol::NO_SUBSCRIBE_SERVICE_ERROR);
   EXPECT_EQ(res.subscribe_result_string().compare("QQ"),0);
 }
+TEST_F(SubscribeTests, double_subscribe_test)
+{
+  basic_protocol::SubscribeServiceRequest req;
+  basic_protocol::SubscribeServiceResponse res;
 
+  std::string in = "hahaha";
+  std::string out = "QQ";
+  
+  invoker.reset();  
+
+  req.set_service_ordinal(1);
+  req.set_subscribe_request_string(in); 
+  
+  cd->request().Clear();
+  cd->request().set_service_ordinal(0);
+  cd->request().set_request_ordinal(2);
+  req.SerializeToString(cd->request().mutable_request_string());
+  
+  b.invoke(invoker);
+
+  req.Clear();
+  res.Clear();
+ 
+  invoker.reset();  
+
+  req.set_service_ordinal(1);
+  req.set_subscribe_request_string(in); 
+  
+  cd->request().Clear();
+  cd->request().set_service_ordinal(0);
+  cd->request().set_request_ordinal(2);
+  req.SerializeToString(cd->request().mutable_request_string());
+  
+  b.invoke(invoker);
+ 
+  EXPECT_EQ(cd->error_code().value(),error_codes::RBL_BACKEND_ALLREADY_SUBSCRIBED);
+  res.ParseFromString(cd->response().response_string());
+  EXPECT_EQ(res.error(),basic_protocol::SERVICE_ALLREADY_SUBSCRIBED); 
+}
 #ifdef ISOLATED_GTEST_COMPILE
 int main(int argc,char ** argv)
 {
