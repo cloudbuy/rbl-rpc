@@ -31,9 +31,6 @@ namespace rubble { namespace rpc {
     void block_till_termination();
     bool shutdown();
   
-    const t_services & services() const { return m_services;}
-    ClientServiceCookies & cookies() { return m_client_service_cookies; }
-    boost::shared_mutex & mutex() { return m_mutex; }
  
     void connect(ClientData::shp & client_data);
     void disconect(ClientData::shp & client_data);
@@ -43,6 +40,12 @@ namespace rubble { namespace rpc {
     basic_protocol::DestinationConnectionType destination_type() const
       { return m_backend_type; }
   protected:
+    friend class BasicProtocolImpl;
+
+    const t_services & services() const { return m_services;}
+    ClientServiceCookies & cookies() { return m_client_service_cookies; }
+    boost::shared_mutex & mutex() { return m_mutex; }
+
     basic_protocol::SourceConnectionType                m_source_type;
     basic_protocol::DestinationConnectionType           m_backend_type;
 
@@ -69,7 +72,7 @@ namespace rubble { namespace rpc {
     void init(boost::system::error_code & ec) {ec.clear();}
     void teardown(boost::system::error_code & ec) {ec.clear();}
  
-   void hello(ClientCookie & cc,ClientData & cd,
+    void hello(ClientCookie & cc,ClientData & cd,
       basic_protocol::HelloRequest & hr, basic_protocol::HelloResponse & hres)
     { 
       if( m_backend->destination_type() != hr.expected_target() )
@@ -96,11 +99,12 @@ namespace rubble { namespace rpc {
       hres.set_error_type(basic_protocol::NO_HELLO_ERRORS);
       cd.establish_client();
     }
+
     void list_services(  ClientCookie & cc ,ClientData & cd,
                         basic_protocol::ListServicesRequest & req, 
                         basic_protocol::ListServicesResponse & res)
     {
-      BackEndBase::t_services services = m_backend->services();
+      const BackEndBase::t_services & services = m_backend->services();
 
       for(int i = 0; i < services.size(); ++i)
       {
@@ -129,10 +133,11 @@ namespace rubble { namespace rpc {
         return;
       }
 
-      ClientServiceCookies cookies = m_backend->cookies(); 
+      ClientServiceCookies & cookies = m_backend->cookies(); 
       ClientCookie * cookie;
       { 
-        boost::unique_lock<boost::shared_mutex> lock(m_backend->mutex());
+        boost::shared_mutex & mutex = m_backend->mutex();
+        boost::unique_lock<boost::shared_mutex> lock(mutex);
         cookies.create_or_retrieve_cookie(
           req.service_ordinal(), &cd, &cookie);
       }
@@ -157,11 +162,11 @@ namespace rubble { namespace rpc {
       if(req.has_subscribe_request_string())
         req_s = req.mutable_subscribe_request_string();
  
-      std::string * res_s = NULL;
-      if(res.has_subscribe_result_string())
-        res_s = res.mutable_subscribe_result_string();
+      std::string * res_s = 
+        res.mutable_subscribe_result_string();
       
       (*s)->subscribe (*cookie,cd,req_s,res_s);
+      res.set_error(basic_protocol::NO_SUBSCRIBE_SERVICE_ERROR);
     }
 
     void backend(BackEndBase * backend)

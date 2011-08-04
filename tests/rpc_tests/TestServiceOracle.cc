@@ -64,7 +64,11 @@ using namespace rubble::rpc::test_proto;
     typedef ClientCookieBase t_client_cookie;
     void init(boost::system::error_code & ec) { ec.clear(); }
     void subscribe(ClientCookie & client_cookie, ClientData & cd,
-      std::string *, std::string *) {}
+      std::string * in, std::string * out) 
+    {
+      BOOST_ASSERT(in->compare("hahaha")==0);
+      out->assign("QQ");
+    }
     void teardown(boost::system::error_code & ec) { ec.clear(); }
     void unsubscribe(ClientCookie & client_cookie, ClientData & cd) {}
     void dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & ){}
@@ -469,12 +473,38 @@ TEST_F(SubscribeTests, subscribe_out_of_range_error)
   cd->request().set_request_ordinal(2);
   req.SerializeToString(cd->request().mutable_request_string());
   
-
   b.invoke(invoker); 
   
   res.ParseFromString(cd->response().response_string());
   EXPECT_EQ(cd->error_code().value(),error_codes::RBL_BACKEND_SUBSCRIBE_NO_SERVICE_WITH_ORDINAL);
   EXPECT_EQ(res.error(), basic_protocol::SERVICE_ORDINAL_NOT_IN_USE);
+}
+
+TEST_F(SubscribeTests, subscribe_test)
+{
+  basic_protocol::SubscribeServiceRequest req;
+  basic_protocol::SubscribeServiceResponse res;
+
+  std::string in = "hahaha";
+  std::string out = "QQ";
+  
+  invoker.reset();  
+
+  req.set_service_ordinal(1);
+  req.set_subscribe_request_string(in); 
+  
+  cd->request().Clear();
+  cd->request().set_service_ordinal(0);
+  cd->request().set_request_ordinal(2);
+  req.SerializeToString(cd->request().mutable_request_string());
+  
+  b.invoke(invoker);
+  
+  EXPECT_FALSE(cd->error_code()) << cd->error_code().value();
+  
+  res.ParseFromString(cd->response().response_string());
+  EXPECT_EQ(res.error(),basic_protocol::NO_SUBSCRIBE_SERVICE_ERROR);
+  EXPECT_EQ(res.subscribe_result_string().compare("QQ"),0);
 }
 
 #ifdef ISOLATED_GTEST_COMPILE

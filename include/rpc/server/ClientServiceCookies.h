@@ -62,7 +62,7 @@ namespace rubble { namespace rpc {
   };
   
      
-  class ClientServiceCookies
+  class ClientServiceCookies : public boost::noncopyable
   {
   public:
     typedef std::map<ClientData *, ClientCookie> t_service_client_cookie_map;
