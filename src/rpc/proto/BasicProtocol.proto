@@ -63,6 +63,7 @@ message ListServicesResponse
 message SubscribeServiceRequest
 {
   required uint32 service_ordinal = 1;    
+  optional string subscribe_request_string =2;
 }
 
 enum ServiceSubscribeErrorType
@@ -74,6 +75,7 @@ enum ServiceSubscribeErrorType
 message SubscribeServiceResponse
 {
   required ServiceSubscribeErrorType error = 1;
+  optional string subscribe_result_string =2;;
 }
 
 service basic_protocol

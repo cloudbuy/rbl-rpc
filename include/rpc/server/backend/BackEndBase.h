@@ -108,7 +108,8 @@ namespace rubble { namespace rpc {
         s_e->set_service_name( b_s_e->name().c_str());
       } 
     }
-    void subscribe(ClientCookie & client_cookie, ClientData & cd) {}
+    void subscribe(ClientCookie & client_cookie, ClientData & cd,
+      std::string *,std::string *) {}
     void unsubscribe(ClientCookie & client_cookie, ClientData & cd) {}
 
     void rpc_subscribe_service( ClientCookie & cc,ClientData & cd,

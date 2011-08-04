@@ -122,7 +122,8 @@ namespace {
         gen_out.Print("typedef ClientCookieBase t_client_cookie;\n");
         gen_out.Print("void init(boost::system::error_code & ec) {}\n");
         gen_out.Print("void teardown(boost::system::error_code & ec) {}\n");
-        gen_out.Print("void subscribe(ClientCookie & client_cookie, ClientData & cd) {}\n");
+        gen_out.Print("void subscribe(ClientCookie & client_cookie, ClientData & cd,\n");
+        gen_out.Print("  std::string * from_client_string, std::string * to_client_string) {}\n");
         gen_out.Print("void unsubscribe(ClientCookie & client_cookie, ClientData & cd) {}\n");
 
         for(int i=0; i<method_count; ++i)
@@ -147,8 +148,9 @@ namespace {
         gen_out.Print("T_IMPL & impl() {return m_impl;}\n");
         gen_out.Print("virtual void init(boost::system::error_code & ec) { return m_impl.init(ec); };\n");
         gen_out.Print("virtual void teardown(boost::system::error_code & ec) { return m_impl.teardown(ec); };\n");
-        gen_out.Print("virtual void subscribe(ClientCookie & client_cookie, ClientData & cd)\n");
-        gen_out.Print("  { m_impl.subscribe(client_cookie,cd); }\n");
+        gen_out.Print("virtual void subscribe(ClientCookie & client_cookie, ClientData & cd,\n");
+        gen_out.Print("  std::string * from_client_string, std::string * to_client_string)\n");
+        gen_out.Print("  { m_impl.subscribe(client_cookie,cd,from_client_string, to_client_string); }\n");
         gen_out.Print("virtual void unsubscribe(ClientCookie & client_cookie, ClientData & cd)\n");
         gen_out.Print("  { m_impl.unsubscribe(client_cookie,cd); } \n");
         gen_out.Print("virtual const char * name() { return \"$S_NAME$\"; }\n","S_NAME", sd->name());

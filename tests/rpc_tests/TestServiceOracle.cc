@@ -12,7 +12,8 @@ using namespace rubble::rpc::test_proto;
     typedef ClientCookieBase t_client_cookie;
     void init(boost::system::error_code & ec) { ec.clear(); }
     void teardown(boost::system::error_code & ec) {}
-    void subscribe(ClientCookie & client_cookie, ClientData & cd) {}
+    void subscribe(ClientCookie & client_cookie, ClientData & cd,
+      std::string *, std::string *) {}
     void unsubscribe(ClientCookie & client_cookie, ClientData & cd) {}
     void dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & ){}
   private:
@@ -24,7 +25,8 @@ using namespace rubble::rpc::test_proto;
     typedef ClientCookieBase t_client_cookie;
     void init(boost::system::error_code & ec) { ec.assign(1,rpc_backend_error); }
     void teardown(boost::system::error_code & ec) {}
-    void subscribe(ClientCookie & client_cookie, ClientData & cd) {}
+    void subscribe(ClientCookie & client_cookie, ClientData & cd,
+      std::string *, std::string *) {}
     void unsubscribe(ClientCookie & client_cookie, ClientData & cd) {}
     void dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & ){}
   private:
@@ -36,7 +38,8 @@ using namespace rubble::rpc::test_proto;
     typedef ClientCookieBase t_client_cookie;
     void init(boost::system::error_code & ec) { ec.clear(); }
     void teardown(boost::system::error_code & ec) {ec.clear();}
-    void subscribe(ClientCookie & client_cookie, ClientData & cd) {}
+    void subscribe(ClientCookie & client_cookie, ClientData & cd,
+      std::string *, std::string *) {}
     void unsubscribe(ClientCookie & client_cookie, ClientData & cd) {}
     void dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & ){}
   private:
@@ -48,7 +51,8 @@ using namespace rubble::rpc::test_proto;
     typedef ClientCookieBase t_client_cookie;
     void init(boost::system::error_code & ec) { ec.clear(); }
     void teardown(boost::system::error_code & ec) { ec.assign(1,rpc_backend_error); }
-    void subscribe(ClientCookie & client_cookie, ClientData & cd) {}
+    void subscribe(ClientCookie & client_cookie, ClientData & cd,
+      std::string *, std::string *) {}
     void unsubscribe(ClientCookie & client_cookie, ClientData & cd) {}
     void dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & ){}
   private:
@@ -59,8 +63,9 @@ using namespace rubble::rpc::test_proto;
   public:
     typedef ClientCookieBase t_client_cookie;
     void init(boost::system::error_code & ec) { ec.clear(); }
+    void subscribe(ClientCookie & client_cookie, ClientData & cd,
+      std::string *, std::string *) {}
     void teardown(boost::system::error_code & ec) { ec.clear(); }
-    void subscribe(ClientCookie & client_cookie, ClientData & cd) {}
     void unsubscribe(ClientCookie & client_cookie, ClientData & cd) {}
     void dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & ){}
   private:
@@ -440,7 +445,7 @@ protected:
   basic_protocol::HelloResponse hres;
 };
 
-TEST_F(SubscribeTests, unscribed_error)
+TEST_F(SubscribeTests, unsubscribed_error)
 {
   invoker.reset();
   cd->request().Clear(); 

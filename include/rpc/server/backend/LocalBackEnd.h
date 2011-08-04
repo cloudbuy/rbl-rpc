@@ -105,7 +105,11 @@ namespace rubble { namespace rpc {
       // Subscription will be done implicetly
       if(request.service_ordinal() != 0)       
       {
-        if( !i.client_cookie->is_subscribed())
+        if(request.request_ordinal() == 3)
+        {
+          // this pair represents the subscribe event, hence it is a no-op    
+        }
+        else if( !i.client_cookie->is_subscribed())
         {
           i.client_data->error_code().assign(
             error_codes::RBL_BACKEND_INVOKE_CLIENT_UNSUBSCRIBED, 
