@@ -96,7 +96,7 @@ namespace rubble { namespace rpc {
       }
     
       { // lock_scope_lock
-        boost::unique_lock<boost::shared_mutex> lock(m_mutex);
+        boost::lock_guard<boost::recursive_mutex> lock(m_mutex);
         m_client_service_cookies.create_or_retrieve_cookie(
           request.service_ordinal(), i.client_data.get(),&i.client_cookie);
       }

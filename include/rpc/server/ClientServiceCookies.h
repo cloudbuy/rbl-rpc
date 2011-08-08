@@ -91,7 +91,7 @@ namespace rubble { namespace rpc {
         ClientCookie ** cookie );
     
     OP_ERROR_CODE contains_cookie ( common::ordinal_type service_ordinal, 
-                                    ClientData * data_key); 
+                                    ClientData * data_key) const; 
   private:
     t_service_cookie_vector m_service_cookie_vector;
   };

@@ -573,7 +573,6 @@ public:
   {
     Cookie * cookie = 0;
     client_cookie.create_cookie(&cookie);
-    std::cout << cookie << std::endl;
     address = (void *) cookie;
     cookie->magic_number = 100;
     sentinel = false;
@@ -667,15 +666,18 @@ protected:
     req.SerializeToString(cd->request().mutable_request_string());
     
     b.invoke(invoker);
-    s_ = static_cast<test_service_one<test_service_cookie_test> *>(s.get());
-    s__ = & s_->get_impl();
     
     invoker.reset();
     cd->request().Clear();
     cd->request().set_service_ordinal(1);
     cd->request().set_request_ordinal(0);
+    
+    b.invoke(invoker);  
 
-    b.invoke(invoker);
+    test_service_one<test_service_cookie_test> * s_
+      = static_cast<test_service_one<test_service_cookie_test> *>( s.get());
+  
+    s__ = &s_->get_impl();
   }
   
   
@@ -703,15 +705,64 @@ protected:
 
 TEST_F(CookieTest, cookie_association_test)
 {
+  
   EXPECT_TRUE( s__->compare_cookie_magic_number()  );
   EXPECT_TRUE( s__->compare_cookie_address());
 }
 
 TEST_F(CookieTest, cookie_dc_test)
 {
+
+  const ClientServiceCookies & c_csc = static_cast<const LocalBackEnd *>(&b)->cookies();
+  
+  EXPECT_FALSE( c_csc.contains_cookie(1,cd.get()) == ClientServiceCookies::COOKIE_ABSENT);
+  
   b.disconect(cd);
   EXPECT_TRUE(s__->unsubscribe_sentinel);
   EXPECT_TRUE(s__->sentinel);
+
+  
+  EXPECT_TRUE( c_csc.contains_cookie(1,cd.get()) == ClientServiceCookies::COOKIE_ABSENT);
+}
+
+TEST_F(CookieTest, cookie_unsubscrive_test)
+{
+  basic_protocol::UnsubscribeServiceRequest us_req;
+  basic_protocol::UnsubscribeServiceResponse us_res;
+ 
+  invoker.reset();
+ 
+  us_req.set_service_ordinal(1);
+  
+  cd->request().Clear();
+  cd->request().set_service_ordinal(0);
+  cd->request().set_request_ordinal(3);
+  us_req.SerializeToString(cd->request().mutable_request_string());
+
+  const ClientServiceCookies & c_csc = static_cast<const LocalBackEnd *>(&b)->cookies();
+  
+  EXPECT_FALSE( c_csc.contains_cookie(1,cd.get()) == ClientServiceCookies::COOKIE_ABSENT);
+ 
+
+  b.invoke(invoker); 
+
+  EXPECT_TRUE( c_csc.contains_cookie(1,cd.get()) == ClientServiceCookies::COOKIE_ABSENT);
+
+  // now test get a new cookie for the same service, the fact that it should
+  // result with a cookie in the uninitialized state.
+
+  // the can be asserted from the fact that when trying to perform a valid 
+  // rpc call, the result should be an error stating that the service 
+  // has not been  mounted by this client.
+  invoker.reset();
+  
+  cd->request().Clear();
+  cd->request().set_service_ordinal(1);
+  cd->request().set_request_ordinal(0);
+    
+  b.invoke(invoker);  
+  
+  EXPECT_EQ(cd->error_code().value(), error_codes::RBL_BACKEND_INVOKE_CLIENT_NOT_SUBSCRIBED);
 }
 
 

@@ -68,9 +68,10 @@ message SubscribeServiceRequest
 
 enum ServiceSubscribeErrorType
 {
-  NO_SUBSCRIBE_SERVICE_ERROR = 0;
-  SERVICE_ORDINAL_NOT_IN_USE = 1;
-  SERVICE_ALLREADY_SUBSCRIBED =2;
+  NO_SUBSCRIBE_SERVICE_ERROR  = 0;
+  SERVICE_ORDINAL_NOT_IN_USE  = 1;
+  SERVICE_ALLREADY_SUBSCRIBED = 2;
+  NO_SUBSCRIPTION_FOR_SERVICE = 3;
 }
 
 message SubscribeServiceResponse
@@ -79,10 +80,24 @@ message SubscribeServiceResponse
   optional string subscribe_result_string =2;;
 }
 
+message UnsubscribeServiceRequest
+{
+  required uint32 service_ordinal = 1;
+}
+
+message UnsubscribeServiceResponse
+{
+  required ServiceSubscribeErrorType error = 1;
+}
+
+
 service basic_protocol
 {
   rpc hello (HelloRequest) returns (HelloResponse);
   rpc list_services(ListServicesRequest) returns (ListServicesResponse); 
+
   rpc rpc_subscribe_service(SubscribeServiceRequest) 
     returns (SubscribeServiceResponse);
+
+  rpc rpc_unsubscribe_service(UnsubscribeServiceRequest) returns (UnsubscribeServiceResponse);
 }

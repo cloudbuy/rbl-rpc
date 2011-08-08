@@ -39,12 +39,14 @@ namespace rubble { namespace rpc {
       { return m_source_type;}
     basic_protocol::DestinationConnectionType destination_type() const
       { return m_backend_type; }
+    const ClientServiceCookies & cookies() const 
+      { return m_client_service_cookies; }
   protected:
     friend class BasicProtocolImpl;
 
-    const t_services & services() const { return m_services;}
+    t_services & services() { return m_services;}
     ClientServiceCookies & cookies() { return m_client_service_cookies; }
-    boost::shared_mutex & mutex() { return m_mutex; }
+    boost::recursive_mutex & mutex() { return m_mutex; }
 
     basic_protocol::SourceConnectionType                m_source_type;
     basic_protocol::DestinationConnectionType           m_backend_type;
@@ -61,7 +63,7 @@ namespace rubble { namespace rpc {
  
     boost::asio::io_service                             m_io_service;
     boost::asio::io_service::work                       m_work;
-    boost::shared_mutex                                 m_mutex;
+    boost::recursive_mutex                              m_mutex;
   };
 
   class BasicProtocolImpl
@@ -122,7 +124,7 @@ namespace rubble { namespace rpc {
                                 basic_protocol::SubscribeServiceRequest & req,
                                 basic_protocol::SubscribeServiceResponse & res)
     { 
-      BackEndBase::t_services services = m_backend->services();
+      BackEndBase::t_services & services = m_backend->services();
       
       if( !( req.service_ordinal() < services.size()))
       {
@@ -136,8 +138,8 @@ namespace rubble { namespace rpc {
       ClientServiceCookies & cookies = m_backend->cookies(); 
       ClientCookie * cookie;
       { 
-        boost::shared_mutex & mutex = m_backend->mutex();
-        boost::unique_lock<boost::shared_mutex> lock(mutex);
+        boost::recursive_mutex & mutex = m_backend->mutex();
+        boost::unique_lock<boost::recursive_mutex> lock(mutex);
         cookies.create_or_retrieve_cookie(
           req.service_ordinal(), &cd, &cookie);
       }
@@ -172,6 +174,45 @@ namespace rubble { namespace rpc {
         cookie->subscribe();
         res.set_error(basic_protocol::NO_SUBSCRIBE_SERVICE_ERROR);
       }
+    }
+
+    void rpc_unsubscribe_service( ClientCookie & cc,ClientData & cd,
+                                basic_protocol::UnsubscribeServiceRequest & req,
+                                basic_protocol::UnsubscribeServiceResponse & res)
+    {
+      boost::recursive_mutex & mutex = m_backend->mutex();
+      boost::unique_lock<boost::recursive_mutex> lock(mutex);
+
+      BackEndBase::t_services & services = m_backend->services();
+
+      if( !( req.service_ordinal() < services.size()))
+      {
+        cd.error_code().assign( 
+          error_codes::RBL_BACKEND_SUBSCRIBE_NO_SERVICE_WITH_ORDINAL,
+          rpc_backend_error);
+        res.set_error(basic_protocol::SERVICE_ORDINAL_NOT_IN_USE);
+        return;
+      }
+      
+      
+      ClientServiceCookies & cookies = m_backend->cookies(); 
+      ClientCookie * cookie;
+      cookies.create_or_retrieve_cookie( req.service_ordinal(), &cd, &cookie);
+      
+      if(! cookie->is_subscribed())
+      {
+        cd.error_code().assign(
+          error_codes::RBL_BACKEND_NOT_SUBSCRIBED,
+          rpc_backend_error);
+        res.set_error(basic_protocol::NO_SUBSCRIPTION_FOR_SERVICE);
+        return;
+      }
+
+      ServiceBase::shp & s = * services[req.service_ordinal()];
+      s->unsubscribe(*cookie,cd);
+
+      cookie->destroy_cookie();
+      cookies.delete_cookie(req.service_ordinal(),&cd);
     }
 
     void backend(BackEndBase * backend)

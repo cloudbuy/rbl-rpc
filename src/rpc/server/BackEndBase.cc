@@ -120,13 +120,13 @@ namespace rubble { namespace rpc {
 
   void BackEndBase::connect(ClientData::shp & client_data)
   {
-    boost::unique_lock<boost::shared_mutex> lock(m_mutex);
+    boost::lock_guard<boost::recursive_mutex> lock(m_mutex);
     m_connected_clients.insert(client_data);
   }
   
   void BackEndBase::disconect(ClientData::shp & client_data)
   {
-    boost::unique_lock<boost::shared_mutex> lock(m_mutex);
+    boost::lock_guard<boost::recursive_mutex> lock(m_mutex);
     
     int m_sz = m_services.size();
 
@@ -145,6 +145,7 @@ namespace rubble { namespace rpc {
         s->unsubscribe(*client_cookie, *client_data);
       }
       client_cookie->destroy_cookie();
+      m_client_service_cookies.delete_cookie(i,client_data.get());
     }
  
     m_connected_clients.erase(client_data);
