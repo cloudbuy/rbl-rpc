@@ -123,9 +123,30 @@ namespace rubble { namespace rpc {
     boost::unique_lock<boost::shared_mutex> lock(m_mutex);
     m_connected_clients.insert(client_data);
   }
+  
   void BackEndBase::disconect(ClientData::shp & client_data)
   {
     boost::unique_lock<boost::shared_mutex> lock(m_mutex);
+    
+    int m_sz = m_services.size();
+
+    ClientCookie * client_cookie;
+    ServiceBase::shp s;
+
+    for(int i = 1; i < m_sz; ++i)
+    {
+      m_client_service_cookies.create_or_retrieve_cookie(
+        i, client_data.get(),&client_cookie);
+
+      s = * m_services[i];      
+
+      if( client_cookie->is_subscribed())
+      {
+        s->unsubscribe(*client_cookie, *client_data);
+      }
+      client_cookie->destroy_cookie();
+    }
+ 
     m_connected_clients.erase(client_data);
   }
 

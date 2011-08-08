@@ -2,12 +2,12 @@ package rubble.rpc.test_proto;
 
 message Request
 {
-  required string req = 1;
+  optional string req = 1;
 }
 
 message Response
 {
-  required string res = 1;
+  optional string res = 1;
 }
 
 service test_service_one

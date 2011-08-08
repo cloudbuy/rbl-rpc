@@ -101,8 +101,8 @@ namespace rubble { namespace rpc {
           request.service_ordinal(), i.client_data.get(),&i.client_cookie);
       }
       
-      // Check if subscribed, service 0 does not a explicit subscribe event.
-      // Subscription will be done implicetly
+      // Check if subscribed, service 0 does not require an explicit subscribe 
+      // event Subscription will be done implicetly
       if(request.service_ordinal() != 0)       
       {
         if( !i.client_cookie->is_subscribed())

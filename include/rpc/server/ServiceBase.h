@@ -11,6 +11,8 @@ namespace rubble { namespace rpc {
   public:
     typedef boost::shared_ptr<ServiceBase> shp;
 
+    virtual ~ServiceBase(){};
+
     virtual void init(boost::system::error_code & ec) =0;
     virtual void teardown(boost::system::error_code & ec)=0;
     virtual void subscribe(ClientCookie & client_cookie, ClientData & cd,
@@ -19,7 +21,6 @@ namespace rubble { namespace rpc {
     virtual bool contains_function_at_ordinal(boost::uint16_t ordinal) = 0;
     virtual void dispatch(ClientCookie & client_cookie, ClientData & cd)=0;
     virtual const char * name() = 0;
-    virtual ~ServiceBase(){};
     
     common::ordinal_type ordinal() { return m_ordinal; }
     void set_ordinal(common::ordinal_type ordinal) { m_ordinal = ordinal; }

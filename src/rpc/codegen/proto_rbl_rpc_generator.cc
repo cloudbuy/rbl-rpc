@@ -156,6 +156,7 @@ namespace {
         gen_out.Print("virtual const char * name() { return \"$S_NAME$\"; }\n","S_NAME", sd->name());
         gen_out.Print("virtual bool require_tracking() \n");
         gen_out.Print("  { return !(boost::is_same<ClientCookieBase, typename T_IMPL::t_client_cookie>::value); }\n");
+        gen_out.Print("const T_IMPL & get_impl() const { return m_impl; }\n"); 
       gen_out.Outdent();
         gen_out.Print("private:\n");
       gen_out.Indent();

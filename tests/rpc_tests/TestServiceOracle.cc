@@ -506,6 +506,7 @@ TEST_F(SubscribeTests, subscribe_test)
   EXPECT_EQ(res.error(),basic_protocol::NO_SUBSCRIBE_SERVICE_ERROR);
   EXPECT_EQ(res.subscribe_result_string().compare("QQ"),0);
 }
+
 TEST_F(SubscribeTests, double_subscribe_test)
 {
   basic_protocol::SubscribeServiceRequest req;
@@ -545,6 +546,175 @@ TEST_F(SubscribeTests, double_subscribe_test)
   res.ParseFromString(cd->response().response_string());
   EXPECT_EQ(res.error(),basic_protocol::SERVICE_ALLREADY_SUBSCRIBED); 
 }
+
+class Cookie : public ClientCookieBase
+{
+public:
+  bool set_destructor_sentinel(bool * sent)
+  {
+    dest_sentinel = sent;
+  }
+  ~Cookie()
+  {
+    * dest_sentinel = true;
+  }
+
+  int magic_number;
+  bool * dest_sentinel;
+};
+
+class test_service_cookie_test
+{
+public:
+  typedef ClientCookieBase t_client_cookie;
+  void init(boost::system::error_code & ec) { ec.clear(); }
+  void subscribe(ClientCookie & client_cookie, ClientData & cd,
+    std::string * in, std::string * out) 
+  {
+    Cookie * cookie = 0;
+    client_cookie.create_cookie(&cookie);
+    std::cout << cookie << std::endl;
+    address = (void *) cookie;
+    cookie->magic_number = 100;
+    sentinel = false;
+    cookie->set_destructor_sentinel(&sentinel);
+    unsubscribe_sentinel = false;
+  }
+  void teardown(boost::system::error_code & ec) { ec.clear(); }
+  void unsubscribe(ClientCookie & client_cookie, ClientData & cd) 
+  {
+    unsubscribe_sentinel = true;
+  }
+  void dummy_rpc(ClientCookie & client_cookie,ClientData &,Request & ,Response & )
+  {
+    Cookie * cookie;
+    client_cookie.retrieve_cookie(&cookie);
+
+    if(cookie == address)
+      ca = true;
+    else
+      ca = false;
+    
+    if ( cookie->magic_number == 100)
+      mn = true;
+    else
+      mn = false;
+  }
+  
+  const bool compare_cookie_magic_number() const
+  {
+    return mn;
+  }
+  
+  const bool compare_cookie_address() const
+  {
+    return ca; 
+  } 
+
+  void * address;
+  bool ca;
+  bool mn;
+  bool sentinel;;
+  bool unsubscribe_sentinel;
+};
+
+class CookieTest : public ::testing::Test
+{
+public:
+  CookieTest()
+    : b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL),
+      s(new test_service_one<test_service_cookie_test>()),
+      cd((new ClientData())),
+      invoker(cd) {}
+protected:
+
+  virtual void SetUp() 
+  {
+    source = basic_protocol::SOURCE_RELAY;
+    destination = basic_protocol::TARGET_MARSHALL;
+
+    b.register_and_init_service(s);
+    b.pool_size(1);
+    b.start();
+    
+    b.connect(cd);
+  
+    hello.set_source_type( source);
+    hello.set_expected_target( destination); 
+    hello.set_node_name("test_client");
+  
+    cd->request().Clear(); 
+    cd->request().set_service_ordinal(0);
+    cd->request().set_request_ordinal(0);
+    hello.SerializeToString(cd->request().mutable_request_string());
+    b.invoke(invoker);
+    hres.ParseFromString(cd->response().response_string());
+    
+    basic_protocol::SubscribeServiceRequest req;
+    basic_protocol::SubscribeServiceResponse res;
+
+    std::string in = "hahaha";
+    std::string out = "QQ";
+  
+    invoker.reset();  
+
+    req.set_service_ordinal(1);
+    req.set_subscribe_request_string(in); 
+  
+    cd->request().Clear();
+    cd->request().set_service_ordinal(0);
+    cd->request().set_request_ordinal(2);
+    req.SerializeToString(cd->request().mutable_request_string());
+    
+    b.invoke(invoker);
+    s_ = static_cast<test_service_one<test_service_cookie_test> *>(s.get());
+    s__ = & s_->get_impl();
+    
+    invoker.reset();
+    cd->request().Clear();
+    cd->request().set_service_ordinal(1);
+    cd->request().set_request_ordinal(0);
+
+    b.invoke(invoker);
+  }
+  
+  
+  virtual void TearDown()
+  {
+    b.shutdown();
+  } 
+
+  basic_protocol::SourceConnectionType        source;
+  basic_protocol::DestinationConnectionType   destination;
+
+  LocalBackEnd b;
+  ServiceBase::shp s;
+  ClientData::shp cd;
+  LocalBackEnd::Invoker invoker;
+  basic_protocol::HelloRequest hello;
+  basic_protocol::HelloResponse hres;
+  
+  basic_protocol::ListServicesRequest list;
+  basic_protocol::ListServicesResponse lres;
+  
+  test_service_one<test_service_cookie_test> * s_;
+  const test_service_cookie_test * s__;
+};
+
+TEST_F(CookieTest, cookie_association_test)
+{
+  EXPECT_TRUE( s__->compare_cookie_magic_number()  );
+  EXPECT_TRUE( s__->compare_cookie_address());
+}
+
+TEST_F(CookieTest, cookie_dc_test)
+{
+  b.disconect(cd);
+  EXPECT_TRUE(s__->unsubscribe_sentinel);
+  EXPECT_TRUE(s__->sentinel);
+}
+
+
 #ifdef ISOLATED_GTEST_COMPILE
 int main(int argc,char ** argv)
 {

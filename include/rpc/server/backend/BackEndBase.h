@@ -19,8 +19,8 @@ namespace rubble { namespace rpc {
   public:
     typedef common::OidContainer<common::Oid, ServiceBase::shp> t_services;
 
-    BackEndBase(  basic_protocol::SourceConnectionType       source_type
-                  ,basic_protocol::DestinationConnectionType backend_type);
+    BackEndBase(  basic_protocol::SourceConnectionType       source_type,
+                  basic_protocol::DestinationConnectionType backend_type);
 
     void pool_size(int pool_size_in) { m_pool_size = pool_size_in; }
     bool is_sealed() { return m_is_sealed; } 
