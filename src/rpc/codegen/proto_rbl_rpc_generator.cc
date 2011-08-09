@@ -157,6 +157,8 @@ namespace {
         gen_out.Print("virtual bool require_tracking() \n");
         gen_out.Print("  { return !(boost::is_same<ClientCookieBase, typename T_IMPL::t_client_cookie>::value); }\n");
         gen_out.Print("const T_IMPL & get_impl() const { return m_impl; }\n"); 
+        gen_out.Print("    virtual void produce_method_list(rubble::rpc::basic_protocol::ListMethodsResponse & lmr)");
+        gen_out.Print("  { ff_produce_method_list(m_dispatch_table,lmr);}\n");
       gen_out.Outdent();
         gen_out.Print("private:\n");
       gen_out.Indent();

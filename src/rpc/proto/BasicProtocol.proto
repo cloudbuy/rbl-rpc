@@ -99,10 +99,19 @@ message ListMethodsRequest
 enum ListMethodErrorType
 {
   NO_LIST_METHOD_ERROR = 0;
+  NO_SERVICE_WITH_ORDINAL =1;
+}
+
+message MethodEntry
+{
+  required uint32 service_ordinal = 1;
+  required string service_name    = 2;
 }
 
 message ListMethodsResponse
 {
+    required ListMethodErrorType error  = 1;
+    repeated MethodEntry methods        = 2;
 }
 
 service basic_protocol

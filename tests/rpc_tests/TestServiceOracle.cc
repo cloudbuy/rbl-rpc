@@ -764,7 +764,83 @@ TEST_F(CookieTest, cookie_unsubscrive_test)
   
   EXPECT_EQ(cd->error_code().value(), error_codes::RBL_BACKEND_INVOKE_CLIENT_NOT_SUBSCRIBED);
 }
+class ListMethodTest : public ::testing::Test
+{
+public:
+  ListMethodTest()
+    : b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL),
+      s(new test_service_one<test_service_one_impl>()),
+      cd((new ClientData())),
+      invoker(cd) {}
+  protected:
+  virtual void SetUp() 
+  {
+    b.register_and_init_service(s);
+    b.pool_size(1);
+    b.start();
+    
+    b.connect(cd);
+  }
+  virtual void TearDown()
+  {
+    b.shutdown();
+  } 
 
+  void hello_invoke()
+  {
+    hello.set_source_type( source);
+    hello.set_expected_target( destination); 
+    hello.set_node_name("test_client");
+  
+    cd->request().Clear(); 
+    cd->request().set_service_ordinal(0);
+    cd->request().set_request_ordinal(0);
+    hello.SerializeToString(cd->request().mutable_request_string());
+    b.invoke(invoker);
+    hres.ParseFromString(cd->response().response_string());
+  }  
+  void set_client_source(basic_protocol::SourceConnectionType s_in)
+    { source = s_in; }
+  void set_client_destination(basic_protocol::DestinationConnectionType d_in)
+    { destination = d_in; }
+
+  basic_protocol::SourceConnectionType        source;
+  basic_protocol::DestinationConnectionType   destination;
+
+  LocalBackEnd b;
+  ServiceBase::shp s;
+  ClientData::shp cd;
+  LocalBackEnd::Invoker invoker;
+  basic_protocol::HelloRequest hello;
+  basic_protocol::HelloResponse hres;
+};
+
+//test the top 4 messages
+TEST_F(ListMethodTest, basic_protocol_messages)
+{
+  basic_protocol::ListMethodsRequest req;
+  basic_protocol::ListMethodsResponse res;
+
+  req.set_service_ordinal(0);
+
+  invoker.reset();
+  cd->request().Clear(); 
+  cd->request().set_service_ordinal(0);
+  cd->request().set_request_ordinal(4);
+
+  req.SerializeToString(cd->request().mutable_request_string());
+  
+  b.invoke(invoker);
+  res.ParseFromString(cd->response().response_string());
+
+  EXPECT_TRUE(res.methods_size() >= 5);
+  EXPECT_EQ( res.error(), 0);
+  EXPECT_EQ( res.methods(0).service_name(),"hello" );
+  EXPECT_EQ( res.methods(1).service_name(),"list_services"); 
+  EXPECT_EQ( res.methods(2).service_name(),"rpc_subscribe_service");
+  EXPECT_EQ( res.methods(3).service_name(),"rpc_unsubscribe_service");
+  EXPECT_EQ( res.methods(4).service_name(),"list_methods");
+}
 
 #ifdef ISOLATED_GTEST_COMPILE
 int main(int argc,char ** argv)

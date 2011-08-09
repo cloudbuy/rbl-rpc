@@ -355,7 +355,20 @@ namespace rubble { namespace rpc {
       basic_protocol::ListMethodsRequest & req ,
       basic_protocol::ListMethodsResponse & res )
   {
-
+    BackEndBase::t_services & services = m_backend->services();
+    
+    if( !( req.service_ordinal() < services.size()))
+    {
+      cd.error_code().assign( 
+        error_codes::RBL_BACKEND_LIST_METHOD_NO_SERVICE_WITH_ORDINAL,
+        rpc_backend_error);
+      res.set_error(basic_protocol::NO_SERVICE_WITH_ORDINAL);
+      return;
+    }
+    
+    ServiceBase::shp * service = services[req.service_ordinal()];
+    (*service)->produce_method_list(res);
+    res.set_error(basic_protocol::NO_LIST_METHOD_ERROR);
   }
 
   //-------------------------------------------------------------------------//

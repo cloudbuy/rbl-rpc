@@ -123,8 +123,8 @@ namespace rubble { namespace rpc {
 
   // contains_cookie //////////////////////////////////////////////////////////
   OP_ERROR_CODE ClientServiceCookies::
-  contains_cookie(common::ordinal_type service_ordinal, ClientData * data_key) 
-    const 
+  contains_cookie(common::ordinal_type service_ordinal, 
+    ClientData * data_key) const 
   {
     BOOST_ASSERT_MSG( ! (service_ordinal > m_service_cookie_vector.size()-1),
       "SERVICE ORDINAL TO RETRIEVE COOKIE IS OUT OF RANGE, THIS SHOULD HAVE BEEN"
