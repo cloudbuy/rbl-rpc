@@ -14,12 +14,61 @@
 
 
 namespace rubble { namespace rpc {
-  class BackEndBase
+  struct in_process_invoker
+  {
+    struct notification_object_
+    {  
+      notification_object_()
+      {
+        reset();
+      }
+      void reset()
+      {
+        ready = false;
+      }
+      bool ready;
+      boost::mutex mutex;
+      boost::condition_variable cond;
+    };
+
+    in_process_invoker(ClientData::shp & cd_in)
+      : client_data(cd_in),
+        notification_object(new notification_object_()) {}
+
+    void reset()
+    {
+      notification_object->reset();
+      client_data->request().Clear();
+      client_data->response().Clear();
+      client_data->error_code().clear();
+      BOOST_ASSERT_MSG( client_data->is_rpc_active() == false, 
+        "THE FLAG THAT REPRESENTS ACTIVE RPC SHOULD NOT BE SET WHEN RESETING AN OBJECT FOR RPC");
+    }
+    
+    void operator() ()
+    {
+      
+      service->dispatch(*client_cookie,*client_data.get());
+
+      client_data->end_rpc();
+
+      boost::lock_guard<boost::mutex> lock(notification_object->mutex);
+      notification_object->ready=true;
+      notification_object->cond.notify_one();
+    }
+
+    ClientData::shp client_data;
+    boost::shared_ptr<notification_object_> notification_object;
+    ClientCookie * client_cookie;
+    ServiceBase::shp service;
+  };
+
+  class BackEnd
   {
   public:
     typedef common::OidContainer<common::Oid, ServiceBase::shp> t_services;
 
-    BackEndBase(  basic_protocol::SourceConnectionType       source_type,
+    BackEnd    (  basic_protocol::SourceConnectionType       source_type,
                   basic_protocol::DestinationConnectionType backend_type);
 
     void pool_size(int pool_size_in) { m_pool_size = pool_size_in; }
@@ -34,6 +83,8 @@ namespace rubble { namespace rpc {
  
     void connect(ClientData::shp & client_data);
     void disconect(ClientData::shp & client_data);
+
+    // invocation functions
     
     basic_protocol::SourceConnectionType source_type() const
       { return m_source_type;}
@@ -41,6 +92,13 @@ namespace rubble { namespace rpc {
       { return m_backend_type; }
     const ClientServiceCookies & cookies() const 
       { return m_client_service_cookies; }
+
+    template< typename Invoker>
+    bool invoke(Invoker & i);
+    
+    template <typename Invoker>
+    void in_process_invoke(Invoker & i);
+
   protected:
     friend class BasicProtocolImpl;
 
@@ -65,6 +123,8 @@ namespace rubble { namespace rpc {
     boost::asio::io_service::work                       m_work;
     boost::recursive_mutex                              m_mutex;
   };
+
+  
 
   class BasicProtocolImpl
   {
@@ -105,10 +165,91 @@ namespace rubble { namespace rpc {
       basic_protocol::ListMethodsResponse & res );
    
  
-     void backend ( BackEndBase * backend );
+     void backend ( BackEnd * backend );
   private:
-     BackEndBase * m_backend;
+     BackEnd * m_backend;
   };
+  
+  template <typename Invoker>
+  void BackEnd::in_process_invoke(Invoker & i)
+  {
+    if( invoke(i) )
+    {
+      boost::unique_lock<boost::mutex> lock(i.notification_object->mutex);
+      if(!i.notification_object->ready)
+        i.notification_object->cond.wait(lock);
+    }
+  }
+
+  template< typename Invoker>
+  bool BackEnd::invoke(Invoker & i)
+  {
+      i.client_data->start_rpc();
+
+
+      basic_protocol::ClientRequest & request = i.client_data->request();
+ 
+      ServiceBase::shp * service = 
+        m_services[request.service_ordinal()];
+      // check if service with ordinal exists
+      if(service == NULL)
+      {
+        i.client_data->error_code().assign 
+          ( error_codes::RBL_BACKEND_INVOKE_NO_SERVICE_WITH_ORDINAL_ERROR,
+            rpc_backend_error);
+        return false; 
+      }
+    
+      i.service = *service;      
+
+      // check if method ordinal is defined in the service
+      if( ! (*service)->contains_function_at_ordinal( request.request_ordinal() )) 
+      {
+        i.client_data->error_code().assign 
+          ( error_codes::RBL_BACKEND_INVOKE_NO_REQUEST_WITH_ORDINAL_ERROR,
+            rpc_backend_error);
+
+        return false;
+      }
+    
+      { // lock_scope_lock
+        boost::lock_guard<boost::recursive_mutex> lock(m_mutex);
+        m_client_service_cookies.create_or_retrieve_cookie(
+          request.service_ordinal(), i.client_data.get(),&i.client_cookie);
+      }
+      
+      // Check if subscribed, service 0 does not require an explicit subscribe 
+      // event Subscription will be done implicetly
+      if(request.service_ordinal() != 0)       
+      {
+        if( !i.client_cookie->is_subscribed())
+        {
+          i.client_data->error_code().assign(
+            error_codes::RBL_BACKEND_INVOKE_CLIENT_NOT_SUBSCRIBED, 
+            rpc_backend_error); 
+          return false; 
+        }
+      }
+      
+      if(request.service_ordinal() == 0 && request.request_ordinal() == 0)
+      {
+        if(i.client_data->is_client_established())
+        {  
+          i.client_data->error_code().assign(
+            error_codes::RBL_BACKEND_ALLREADY_ESTABLISHED,
+            rpc_backend_error);
+          basic_protocol::HelloResponse hres;
+          hres.set_error_type(basic_protocol::CLIENT_ALLREADY_ESTABLISHED);
+          hres.SerializeToString( 
+            i.client_data->response().mutable_response_string());
+
+          i.client_data->request_disconect();
+          return false; 
+        }
+      }
+      m_io_service.post(i);
+      return true;
+    }
 
 } }
 #endif

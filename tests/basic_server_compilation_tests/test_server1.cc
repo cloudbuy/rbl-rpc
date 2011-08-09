@@ -33,7 +33,7 @@ struct hello
 void dispatch(int count)
 {
   
-  BackEndBase b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL);
+  BackEnd b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL);
   
   b.pool_size(4);
   b.start();

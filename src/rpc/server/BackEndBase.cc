@@ -1,10 +1,10 @@
 #include <rpc/server/backend/BackEndBase.h>
 
 namespace rubble { namespace rpc {
-// BackEndBase ////////////////////////////////////////////////////////////////
+// BackEnd ////////////////////////////////////////////////////////////////
 
-  // BackEndBase //////////////////////////////////////////////////////////////
-  BackEndBase::BackEndBase( 
+  // BackEnd //////////////////////////////////////////////////////////////
+  BackEnd::BackEnd( 
     basic_protocol::SourceConnectionType       source_type,
     basic_protocol::DestinationConnectionType backend_type) 
     : m_source_type(source_type),
@@ -26,7 +26,7 @@ namespace rubble { namespace rpc {
   //-------------------------------------------------------------------------//
 
   // start ////////////////////////////////////////////////////////////////////
-  void BackEndBase::start()
+  void BackEnd::start()
   {
     BOOST_ASSERT_MSG((m_pool_size > 0), "thread pool must have >=1 threads");
 
@@ -56,7 +56,7 @@ namespace rubble { namespace rpc {
   //-------------------------------------------------------------------------//
 
   //  register_and_init_service ///////////////////////////////////////////////
-  void BackEndBase::register_and_init_service(ServiceBase::shp service)
+  void BackEnd::register_and_init_service(ServiceBase::shp service)
   {
     if(!m_is_sealed)
     {
@@ -87,12 +87,12 @@ namespace rubble { namespace rpc {
   //-------------------------------------------------------------------------//
   
   // block_till_termination ///////////////////////////////////////////////////
-  void BackEndBase::block_till_termination()
+  void BackEnd::block_till_termination()
   {
     m_thread_group.join_all();
   }
 
-  bool BackEndBase::shutdown()
+  bool BackEnd::shutdown()
   {
     BOOST_ASSERT_MSG(m_is_sealed, 
       "shutdown should not be run on an unsealed backend");
@@ -129,7 +129,7 @@ namespace rubble { namespace rpc {
   //-------------------------------------------------------------------------//
   
   // connect //////////////////////////////////////////////////////////////////
-  void BackEndBase::connect(ClientData::shp & client_data)
+  void BackEnd::connect(ClientData::shp & client_data)
   {
     boost::lock_guard<boost::recursive_mutex> lock(m_mutex);
     m_connected_clients.insert(client_data);
@@ -137,7 +137,7 @@ namespace rubble { namespace rpc {
   //-------------------------------------------------------------------------//
 
   // disconect ////////////////////////////////////////////////////////////////
-  void BackEndBase::disconect(ClientData::shp & client_data)
+  void BackEnd::disconect(ClientData::shp & client_data)
   {
     boost::lock_guard<boost::recursive_mutex> lock(m_mutex);
     
@@ -164,6 +164,7 @@ namespace rubble { namespace rpc {
     m_connected_clients.erase(client_data);
   }
   //-------------------------------------------------------------------------//
+    //-------------------------------------------------------------------------//
 //---------------------------------------------------------------------------//
 
 // BasicProtocolImpl //////////////////////////////////////////////////////////
@@ -217,13 +218,13 @@ namespace rubble { namespace rpc {
     basic_protocol::ListServicesRequest & req, 
     basic_protocol::ListServicesResponse & res)
   {
-    const BackEndBase::t_services & services = m_backend->services();
+    const BackEnd::t_services & services = m_backend->services();
 
     for(int i = 0; i < services.size(); ++i)
     {
       basic_protocol::ServiceEntry * s_e = res.add_services(); 
       
-      const BackEndBase::t_services::entry_type * b_s_e = 
+      const BackEnd::t_services::entry_type * b_s_e = 
         services.EntryAtordinal(i);
       
       s_e->set_service_ordinal( b_s_e->ordinal());
@@ -254,7 +255,7 @@ namespace rubble { namespace rpc {
     basic_protocol::SubscribeServiceRequest & req,
     basic_protocol::SubscribeServiceResponse & res)
   { 
-    BackEndBase::t_services & services = m_backend->services();
+    BackEnd::t_services & services = m_backend->services();
     
     if( !( req.service_ordinal() < services.size()))
     {
@@ -316,7 +317,7 @@ namespace rubble { namespace rpc {
     boost::recursive_mutex & mutex = m_backend->mutex();
     boost::unique_lock<boost::recursive_mutex> lock(mutex);
 
-    BackEndBase::t_services & services = m_backend->services();
+    BackEnd::t_services & services = m_backend->services();
 
     if( !( req.service_ordinal() < services.size()))
     {
@@ -355,7 +356,7 @@ namespace rubble { namespace rpc {
       basic_protocol::ListMethodsRequest & req ,
       basic_protocol::ListMethodsResponse & res )
   {
-    BackEndBase::t_services & services = m_backend->services();
+    BackEnd::t_services & services = m_backend->services();
     
     if( !( req.service_ordinal() < services.size()))
     {
@@ -374,7 +375,7 @@ namespace rubble { namespace rpc {
   //-------------------------------------------------------------------------//
     
   // backend ////////////////////////////////////////////////////////////////// 
-  void BasicProtocolImpl::backend(BackEndBase * backend)
+  void BasicProtocolImpl::backend(BackEnd * backend)
   { 
     m_backend = backend; 
   }

@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <rpc/server/backend/LocalBackEnd.h>
+#include <rpc/server/backend/BackEndBase.h>
 #include <rpc/server/ClientServiceCookies.h>
 #include <rpc/proto/TestService-server.rblrpc.h>
 
@@ -77,7 +77,7 @@ using namespace rubble::rpc::test_proto;
 
 TEST(backed_tests,duplicate_identifier_fail)
 {
-  LocalBackEnd b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL);
+  BackEnd b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL);
   ServiceBase::shp s(new test_service_one<test_service_one_no_fail>());
   b.register_and_init_service(s);
 
@@ -86,7 +86,7 @@ TEST(backed_tests,duplicate_identifier_fail)
 
 TEST(backed_tests,service_innit_fail)
 {
-  LocalBackEnd b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL);
+  BackEnd b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL);
   ServiceBase::shp s(new test_service_one<test_service_one_fail>());
   
   ASSERT_THROW( b.register_and_init_service(s),BackEndException);
@@ -95,7 +95,7 @@ TEST(backed_tests,service_innit_fail)
 
 TEST(backed_tests,teardown_no_fail)
 {
-  LocalBackEnd b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL);
+  BackEnd b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL);
   ServiceBase::shp s(new test_service_one<test_service_one_dest_no_fail>());
   b.register_and_init_service(s);
   
@@ -106,7 +106,7 @@ TEST(backed_tests,teardown_no_fail)
 
 TEST(backed_tests,teardown_fail)
 {
-  LocalBackEnd b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL);
+  BackEnd b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL);
   ServiceBase::shp s(new test_service_one<test_service_one_dest_fail>());
   b.register_and_init_service(s);
   
@@ -147,7 +147,7 @@ public:
     cd->request().set_service_ordinal(0);
     cd->request().set_request_ordinal(0);
     hello.SerializeToString(cd->request().mutable_request_string());
-    b.invoke(invoker);
+    b.in_process_invoke(invoker);
     hres.ParseFromString(cd->response().response_string());
   }  
   void set_client_source(basic_protocol::SourceConnectionType s_in)
@@ -158,10 +158,10 @@ public:
   basic_protocol::SourceConnectionType        source;
   basic_protocol::DestinationConnectionType   destination;
 
-  LocalBackEnd b;
+  BackEnd b;
   ServiceBase::shp s;
   ClientData::shp cd;
-  LocalBackEnd::Invoker invoker;
+  in_process_invoker  invoker;
   basic_protocol::HelloRequest hello;
   basic_protocol::HelloResponse hres;
 };
@@ -262,7 +262,7 @@ protected:
     cd->request().set_service_ordinal(0);
     cd->request().set_request_ordinal(0);
     hello.SerializeToString(cd->request().mutable_request_string());
-    b.invoke(invoker);
+    b.in_process_invoke(invoker);
     hres.ParseFromString(cd->response().response_string());
   }
   
@@ -272,7 +272,7 @@ protected:
     cd->request().Clear();
     cd->request().set_service_ordinal(1);
     cd->request().set_request_ordinal(5);
-    b.invoke(invoker);
+    b.in_process_invoke(invoker);
 
   }
 
@@ -282,7 +282,7 @@ protected:
     cd->request().Clear();
     cd->request().set_service_ordinal(3);
     cd->request().set_request_ordinal(0);
-    b.invoke(invoker);
+    b.in_process_invoke(invoker);
   }
  
   virtual void TearDown()
@@ -293,10 +293,10 @@ protected:
   basic_protocol::SourceConnectionType        source;
   basic_protocol::DestinationConnectionType   destination;
 
-  LocalBackEnd b;
+  BackEnd b;
   ServiceBase::shp s;
   ClientData::shp cd;
-  LocalBackEnd::Invoker invoker;
+  in_process_invoker invoker;
   basic_protocol::HelloRequest hello;
   basic_protocol::HelloResponse hres;
   
@@ -346,7 +346,7 @@ protected:
     cd->request().set_service_ordinal(0);
     cd->request().set_request_ordinal(0);
     hello.SerializeToString(cd->request().mutable_request_string());
-    b.invoke(invoker);
+    b.in_process_invoke(invoker);
     hres.ParseFromString(cd->response().response_string());
   }
   
@@ -358,7 +358,7 @@ protected:
     cd->request().set_request_ordinal(1);
     
     list.SerializeToString(cd->request().mutable_request_string());
-    b.invoke(invoker);
+    b.in_process_invoke(invoker);
     lres.ParseFromString(cd->response().response_string());
   }
   
@@ -370,10 +370,10 @@ protected:
   basic_protocol::SourceConnectionType        source;
   basic_protocol::DestinationConnectionType   destination;
 
-  LocalBackEnd b;
+  BackEnd b;
   ServiceBase::shp s;
   ClientData::shp cd;
-  LocalBackEnd::Invoker invoker;
+  in_process_invoker invoker;
   basic_protocol::HelloRequest hello;
   basic_protocol::HelloResponse hres;
   
@@ -428,7 +428,7 @@ protected:
     cd->request().set_service_ordinal(0);
     cd->request().set_request_ordinal(0);
     hello.SerializeToString(cd->request().mutable_request_string());
-    b.invoke(invoker);
+    b.in_process_invoke(invoker);
     hres.ParseFromString(cd->response().response_string());
   }
   
@@ -441,10 +441,10 @@ protected:
   basic_protocol::SourceConnectionType        source;
   basic_protocol::DestinationConnectionType   destination;
 
-  LocalBackEnd b;
+  BackEnd b;
   ServiceBase::shp s;
   ClientData::shp cd;
-  LocalBackEnd::Invoker invoker;
+  in_process_invoker invoker;
   basic_protocol::HelloRequest hello;
   basic_protocol::HelloResponse hres;
 };
@@ -455,7 +455,7 @@ TEST_F(SubscribeTests, unsubscribed_error)
   cd->request().Clear(); 
   cd->request().set_service_ordinal(1);
   cd->request().set_request_ordinal(0);
-  b.invoke(invoker);
+  b.in_process_invoke(invoker);
   EXPECT_EQ(cd->error_code().value(), error_codes::RBL_BACKEND_INVOKE_CLIENT_NOT_SUBSCRIBED);
 }
 
@@ -473,7 +473,7 @@ TEST_F(SubscribeTests, subscribe_out_of_range_error)
   cd->request().set_request_ordinal(2);
   req.SerializeToString(cd->request().mutable_request_string());
   
-  b.invoke(invoker); 
+  b.in_process_invoke(invoker); 
   
   res.ParseFromString(cd->response().response_string());
   EXPECT_EQ(cd->error_code().value(),error_codes::RBL_BACKEND_SUBSCRIBE_NO_SERVICE_WITH_ORDINAL);
@@ -498,7 +498,7 @@ TEST_F(SubscribeTests, subscribe_test)
   cd->request().set_request_ordinal(2);
   req.SerializeToString(cd->request().mutable_request_string());
   
-  b.invoke(invoker);
+  b.in_process_invoke(invoker);
   
   EXPECT_FALSE(cd->error_code()) << cd->error_code().value();
   
@@ -525,7 +525,7 @@ TEST_F(SubscribeTests, double_subscribe_test)
   cd->request().set_request_ordinal(2);
   req.SerializeToString(cd->request().mutable_request_string());
   
-  b.invoke(invoker);
+  b.in_process_invoke(invoker);
 
   req.Clear();
   res.Clear();
@@ -540,7 +540,7 @@ TEST_F(SubscribeTests, double_subscribe_test)
   cd->request().set_request_ordinal(2);
   req.SerializeToString(cd->request().mutable_request_string());
   
-  b.invoke(invoker);
+  b.in_process_invoke(invoker);
  
   EXPECT_EQ(cd->error_code().value(),error_codes::RBL_BACKEND_ALLREADY_SUBSCRIBED);
   res.ParseFromString(cd->response().response_string());
@@ -646,7 +646,7 @@ protected:
     cd->request().set_service_ordinal(0);
     cd->request().set_request_ordinal(0);
     hello.SerializeToString(cd->request().mutable_request_string());
-    b.invoke(invoker);
+    b.in_process_invoke(invoker);
     hres.ParseFromString(cd->response().response_string());
     
     basic_protocol::SubscribeServiceRequest req;
@@ -665,14 +665,14 @@ protected:
     cd->request().set_request_ordinal(2);
     req.SerializeToString(cd->request().mutable_request_string());
     
-    b.invoke(invoker);
+    b.in_process_invoke(invoker);
     
     invoker.reset();
     cd->request().Clear();
     cd->request().set_service_ordinal(1);
     cd->request().set_request_ordinal(0);
     
-    b.invoke(invoker);  
+    b.in_process_invoke(invoker);  
 
     test_service_one<test_service_cookie_test> * s_
       = static_cast<test_service_one<test_service_cookie_test> *>( s.get());
@@ -689,10 +689,10 @@ protected:
   basic_protocol::SourceConnectionType        source;
   basic_protocol::DestinationConnectionType   destination;
 
-  LocalBackEnd b;
+  BackEnd b;
   ServiceBase::shp s;
   ClientData::shp cd;
-  LocalBackEnd::Invoker invoker;
+  in_process_invoker invoker;
   basic_protocol::HelloRequest hello;
   basic_protocol::HelloResponse hres;
   
@@ -713,7 +713,7 @@ TEST_F(CookieTest, cookie_association_test)
 TEST_F(CookieTest, cookie_dc_test)
 {
 
-  const ClientServiceCookies & c_csc = static_cast<const LocalBackEnd *>(&b)->cookies();
+  const ClientServiceCookies & c_csc = static_cast<const BackEnd *>(&b)->cookies();
   
   EXPECT_FALSE( c_csc.contains_cookie(1,cd.get()) == ClientServiceCookies::COOKIE_ABSENT);
   
@@ -739,12 +739,12 @@ TEST_F(CookieTest, cookie_unsubscrive_test)
   cd->request().set_request_ordinal(3);
   us_req.SerializeToString(cd->request().mutable_request_string());
 
-  const ClientServiceCookies & c_csc = static_cast<const LocalBackEnd *>(&b)->cookies();
+  const ClientServiceCookies & c_csc = static_cast<const BackEnd *>(&b)->cookies();
   
   EXPECT_FALSE( c_csc.contains_cookie(1,cd.get()) == ClientServiceCookies::COOKIE_ABSENT);
  
 
-  b.invoke(invoker); 
+  b.in_process_invoke(invoker); 
 
   EXPECT_TRUE( c_csc.contains_cookie(1,cd.get()) == ClientServiceCookies::COOKIE_ABSENT);
 
@@ -760,7 +760,7 @@ TEST_F(CookieTest, cookie_unsubscrive_test)
   cd->request().set_service_ordinal(1);
   cd->request().set_request_ordinal(0);
     
-  b.invoke(invoker);  
+  b.in_process_invoke(invoker);  
   
   EXPECT_EQ(cd->error_code().value(), error_codes::RBL_BACKEND_INVOKE_CLIENT_NOT_SUBSCRIBED);
 }
@@ -796,7 +796,7 @@ public:
     cd->request().set_service_ordinal(0);
     cd->request().set_request_ordinal(0);
     hello.SerializeToString(cd->request().mutable_request_string());
-    b.invoke(invoker);
+    b.in_process_invoke(invoker);
     hres.ParseFromString(cd->response().response_string());
   }  
   void set_client_source(basic_protocol::SourceConnectionType s_in)
@@ -807,10 +807,10 @@ public:
   basic_protocol::SourceConnectionType        source;
   basic_protocol::DestinationConnectionType   destination;
 
-  LocalBackEnd b;
+  BackEnd b;
   ServiceBase::shp s;
   ClientData::shp cd;
-  LocalBackEnd::Invoker invoker;
+  in_process_invoker invoker;
   basic_protocol::HelloRequest hello;
   basic_protocol::HelloResponse hres;
 };
@@ -830,7 +830,7 @@ TEST_F(ListMethodTest, basic_protocol_messages)
 
   req.SerializeToString(cd->request().mutable_request_string());
   
-  b.invoke(invoker);
+  b.in_process_invoke(invoker);
   res.ParseFromString(cd->response().response_string());
 
   EXPECT_TRUE(res.methods_size() >= 5);
