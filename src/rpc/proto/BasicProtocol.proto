@@ -91,13 +91,27 @@ message UnsubscribeServiceResponse
 }
 
 
+message ListMethodsRequest
+{
+  required uint32 service_ordinal = 1;
+}
+
+enum ListMethodErrorType
+{
+  NO_LIST_METHOD_ERROR = 0;
+}
+
+message ListMethodsResponse
+{
+}
+
 service basic_protocol
 {
   rpc hello (HelloRequest) returns (HelloResponse);
   rpc list_services(ListServicesRequest) returns (ListServicesResponse); 
-
   rpc rpc_subscribe_service(SubscribeServiceRequest) 
     returns (SubscribeServiceResponse);
-
-  rpc rpc_unsubscribe_service(UnsubscribeServiceRequest) returns (UnsubscribeServiceResponse);
+  rpc rpc_unsubscribe_service(UnsubscribeServiceRequest)
+    returns (UnsubscribeServiceResponse);
+  rpc list_methods (ListMethodsRequest) returns (ListMethodsResponse); 
 }

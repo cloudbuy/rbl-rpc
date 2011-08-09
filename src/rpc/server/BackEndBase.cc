@@ -349,6 +349,17 @@ namespace rubble { namespace rpc {
   }
   //-------------------------------------------------------------------------//
   
+  // list_methods /////////////////////////////////////////////////////////////
+  void BasicProtocolImpl::list_methods (
+      ClientCookie & cc,   ClientData & cd ,
+      basic_protocol::ListMethodsRequest & req ,
+      basic_protocol::ListMethodsResponse & res )
+  {
+
+  }
+
+  //-------------------------------------------------------------------------//
+    
   // backend ////////////////////////////////////////////////////////////////// 
   void BasicProtocolImpl::backend(BackEndBase * backend)
   { 

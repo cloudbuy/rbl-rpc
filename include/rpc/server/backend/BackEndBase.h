@@ -98,7 +98,13 @@ namespace rubble { namespace rpc {
         ClientCookie & cc,ClientData & cd,
         basic_protocol::UnsubscribeServiceRequest & req,
         basic_protocol::UnsubscribeServiceResponse & res);
-    
+   
+    void list_methods (
+      ClientCookie & cc,   ClientData & cd ,
+      basic_protocol::ListMethodsRequest & req ,
+      basic_protocol::ListMethodsResponse & res );
+   
+ 
      void backend ( BackEndBase * backend );
   private:
      BackEndBase * m_backend;
