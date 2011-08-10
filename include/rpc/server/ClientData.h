@@ -88,7 +88,6 @@ namespace rubble { namespace rpc {
     std::string                             m_name;
     boost::system::error_code               m_ec;   
     boost::uint32_t                         m_flags;
-    void *                                  m_io_object_ptr;
     
     bool                                    m_rpc_active;
     bool                                    m_should_disconect;

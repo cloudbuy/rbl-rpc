@@ -31,8 +31,8 @@ namespace rubble { namespace rpc {
       boost::condition_variable cond;
     };
 
-    in_process_invoker(ClientData::shp & cd_in)
-      : client_data(cd_in),
+    in_process_invoker()
+      : client_data(new ClientData()),
         notification_object(new notification_object_()) {}
 
     void reset()
@@ -55,6 +55,14 @@ namespace rubble { namespace rpc {
       boost::lock_guard<boost::mutex> lock(notification_object->mutex);
       notification_object->ready=true;
       notification_object->cond.notify_one();
+    }
+
+
+    void after_post()
+    {
+      boost::unique_lock<boost::mutex> lock(notification_object->mutex);
+      if(!notification_object->ready)
+        notification_object->cond.wait(lock);
     }
 
     ClientData::shp client_data;
@@ -94,11 +102,8 @@ namespace rubble { namespace rpc {
       { return m_client_service_cookies; }
 
     template< typename Invoker>
-    bool invoke(Invoker & i);
+    void invoke(Invoker & i);
     
-    template <typename Invoker>
-    void in_process_invoke(Invoker & i);
-
   protected:
     friend class BasicProtocolImpl;
 
@@ -170,22 +175,10 @@ namespace rubble { namespace rpc {
      BackEnd * m_backend;
   };
   
-  template <typename Invoker>
-  void BackEnd::in_process_invoke(Invoker & i)
-  {
-    if( invoke(i) )
-    {
-      boost::unique_lock<boost::mutex> lock(i.notification_object->mutex);
-      if(!i.notification_object->ready)
-        i.notification_object->cond.wait(lock);
-    }
-  }
-
   template< typename Invoker>
-  bool BackEnd::invoke(Invoker & i)
+  void BackEnd::invoke(Invoker & i)
   {
       i.client_data->start_rpc();
-
 
       basic_protocol::ClientRequest & request = i.client_data->request();
  
@@ -197,7 +190,7 @@ namespace rubble { namespace rpc {
         i.client_data->error_code().assign 
           ( error_codes::RBL_BACKEND_INVOKE_NO_SERVICE_WITH_ORDINAL_ERROR,
             rpc_backend_error);
-        return false; 
+        return; 
       }
     
       i.service = *service;      
@@ -209,7 +202,7 @@ namespace rubble { namespace rpc {
           ( error_codes::RBL_BACKEND_INVOKE_NO_REQUEST_WITH_ORDINAL_ERROR,
             rpc_backend_error);
 
-        return false;
+        return;
       }
     
       { // lock_scope_lock
@@ -227,7 +220,7 @@ namespace rubble { namespace rpc {
           i.client_data->error_code().assign(
             error_codes::RBL_BACKEND_INVOKE_CLIENT_NOT_SUBSCRIBED, 
             rpc_backend_error); 
-          return false; 
+          return; 
         }
       }
       
@@ -244,11 +237,11 @@ namespace rubble { namespace rpc {
             i.client_data->response().mutable_response_string());
 
           i.client_data->request_disconect();
-          return false; 
+          return; 
         }
       }
       m_io_service.post(i);
-      return true;
+      i.after_post();
     }
 
 } }
