@@ -136,6 +136,7 @@ public:
 
   void hello_invoke()
   {
+    invoker.reset();
     hello.set_source_type( source);
     hello.set_expected_target( destination); 
     hello.set_node_name("test_client");
@@ -172,7 +173,8 @@ TEST_F(HelloTest, connect_correct_hello)
   EXPECT_EQ(invoker.client_data->name(), "");
 
   hello_invoke();
-
+  
+  EXPECT_FALSE(invoker.client_data->is_rpc_active());
   EXPECT_EQ(invoker.client_data->name() , "test_client");
 
   EXPECT_EQ(hres.error_type(), basic_protocol::NO_HELLO_ERRORS);
@@ -192,7 +194,7 @@ TEST_F(HelloTest, connect_multiple_hello)
 
   hello_invoke();
   hello_invoke();
-
+  EXPECT_FALSE(invoker.client_data->is_rpc_active());
 //  EXPECT_EQ(hres.error_type(), basic_protocol::NO_HELLO_ERRORS);
   EXPECT_TRUE(invoker.client_data->error_code());
   EXPECT_EQ(invoker.client_data->error_code().value(), error_codes::RBL_BACKEND_ALLREADY_ESTABLISHED);

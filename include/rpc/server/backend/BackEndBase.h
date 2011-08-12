@@ -121,6 +121,9 @@ namespace rubble { namespace rpc {
      BackEnd * m_backend;
   };
 
+#define ERROR_RETURN() \
+  i.client_data->end_rpc();\
+  return;
   
   template< typename Invoker>
   void BackEnd::invoke(Invoker & i)
@@ -137,7 +140,7 @@ namespace rubble { namespace rpc {
         i.client_data->error_code().assign 
           ( error_codes::RBL_BACKEND_INVOKE_NO_SERVICE_WITH_ORDINAL_ERROR,
             rpc_backend_error);
-        return; 
+        ERROR_RETURN();
       }
     
       i.service = service->get();      
@@ -148,8 +151,8 @@ namespace rubble { namespace rpc {
         i.client_data->error_code().assign 
           ( error_codes::RBL_BACKEND_INVOKE_NO_REQUEST_WITH_ORDINAL_ERROR,
             rpc_backend_error);
-
-        return;
+        
+        ERROR_RETURN();
       }
     
       { // lock_scope_lock
@@ -167,7 +170,7 @@ namespace rubble { namespace rpc {
           i.client_data->error_code().assign(
             error_codes::RBL_BACKEND_INVOKE_CLIENT_NOT_SUBSCRIBED, 
             rpc_backend_error); 
-          return; 
+          ERROR_RETURN();
         }
       }
       
@@ -184,7 +187,7 @@ namespace rubble { namespace rpc {
             i.client_data->response().mutable_response_string());
 
           i.client_data->request_disconect();
-          return; 
+          ERROR_RETURN();
         }
       }
       m_io_service.post(i);
