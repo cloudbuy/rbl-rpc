@@ -29,10 +29,10 @@ namespace rubble { namespace rpc {
     void seal() { m_is_sealed = true;}
    
     void start();
+    void end_rpc(ClientData::ptr client_data); 
     void register_and_init_service(ServiceBase::shp service);
     void block_till_termination();
     bool shutdown();
-  
  
     void connect(ClientData::ptr   client_data);
     void disconect(ClientData::ptr client_data);
@@ -48,7 +48,6 @@ namespace rubble { namespace rpc {
 
     template< typename Invoker>
     void invoke(Invoker & i);
-    
   protected:
     friend class BasicProtocolImpl;
 
@@ -71,8 +70,13 @@ namespace rubble { namespace rpc {
     bool                                                m_has_shutdown;
  
     boost::asio::io_service                             m_io_service;
+
     boost::asio::io_service::work                       m_work;
     boost::recursive_mutex                              m_mutex;
+    
+    boost::timed_mutex                                  m_rpc_activity_mutex;
+    boost::uint32_t                                     m_rpc_count;
+    bool                                                m_is_shutting_down;
   };
 
   
@@ -121,14 +125,37 @@ namespace rubble { namespace rpc {
      BackEnd * m_backend;
   };
 
-#define ERROR_RETURN() \
-  i.client_data->end_rpc();\
+#define RBL_RPC_START_RPC(client_data)                                          \
+  client_data->start_rpc();                                                     \
+  {                                                                             \
+    boost::lock_guard<boost::timed_mutex> act_lock(m_rpc_activity_mutex);       \
+    m_rpc_count++;                                                              \
+  }
+
+#define RBL_RPC_END_RPC(client_data)                                            \
+  {                                                                             \
+    boost::lock_guard<boost::timed_mutex> act_lock(m_rpc_activity_mutex);       \
+    m_rpc_count--;                                                              \
+  }                                                                             \
+  client_data->end_rpc();
+
+  inline void BackEnd::end_rpc(ClientData::ptr client_data)
+  {
+    RBL_RPC_END_RPC(client_data);
+  }
+
+#define RBL_RPC_ERROR_RETURN_RPC(client_data)                                   \
+  {                                                                             \
+    boost::lock_guard<boost::timed_mutex> act_lock(m_rpc_activity_mutex);       \
+    m_rpc_count--;                                                              \
+  }                                                                             \
+  client_data->end_rpc();                                                       \
   return;
   
   template< typename Invoker>
   void BackEnd::invoke(Invoker & i)
   {
-      i.client_data->start_rpc();
+      RBL_RPC_START_RPC(i.client_data);      
 
       basic_protocol::ClientRequest & request = i.client_data->request();
  
@@ -140,7 +167,7 @@ namespace rubble { namespace rpc {
         i.client_data->error_code().assign 
           ( error_codes::RBL_BACKEND_INVOKE_NO_SERVICE_WITH_ORDINAL_ERROR,
             rpc_backend_error);
-        ERROR_RETURN();
+        RBL_RPC_ERROR_RETURN_RPC(i.client_data);
       }
     
       i.service = service->get();      
@@ -152,7 +179,7 @@ namespace rubble { namespace rpc {
           ( error_codes::RBL_BACKEND_INVOKE_NO_REQUEST_WITH_ORDINAL_ERROR,
             rpc_backend_error);
         
-        ERROR_RETURN();
+        RBL_RPC_ERROR_RETURN_RPC(i.client_data);
       }
     
       { // lock_scope_lock
@@ -170,7 +197,7 @@ namespace rubble { namespace rpc {
           i.client_data->error_code().assign(
             error_codes::RBL_BACKEND_INVOKE_CLIENT_NOT_SUBSCRIBED, 
             rpc_backend_error); 
-          ERROR_RETURN();
+          RBL_RPC_ERROR_RETURN_RPC(i.client_data);
         }
       }
       
@@ -187,7 +214,7 @@ namespace rubble { namespace rpc {
             i.client_data->response().mutable_response_string());
 
           i.client_data->request_disconect();
-          ERROR_RETURN();
+          RBL_RPC_ERROR_RETURN_RPC(i.client_data);
         }
       }
       m_io_service.post(i);

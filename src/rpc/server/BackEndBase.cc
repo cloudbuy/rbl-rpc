@@ -13,7 +13,8 @@ namespace rubble { namespace rpc {
       m_work(m_io_service),
       m_services(),
       m_is_sealed(false),
-      m_service_count(0) 
+      m_service_count(0),
+      m_rpc_count(0) 
 
     {
       basic_protocol::basic_protocol<BasicProtocolImpl> * bp =
@@ -60,7 +61,7 @@ namespace rubble { namespace rpc {
     }
   }
   //-------------------------------------------------------------------------//
-
+  
   //  register_and_init_service ///////////////////////////////////////////////
   void BackEnd::register_and_init_service(ServiceBase::shp service)
   {
