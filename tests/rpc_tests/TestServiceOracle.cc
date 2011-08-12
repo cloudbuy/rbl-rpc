@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <rpc/server/backend/BackEndBase.h>
+#include <rpc/server/backend/InProcessInvoker.h>
 #include <rpc/server/ClientServiceCookies.h>
 #include <rpc/proto/TestService-server.rblrpc.h>
 
@@ -156,7 +157,7 @@ public:
 
   BackEnd b;
   ServiceBase::shp s;
-  in_process_invoker  invoker;
+  InProcessInvoker  invoker;
   basic_protocol::HelloRequest hello;
   basic_protocol::HelloResponse hres;
 };
@@ -287,7 +288,7 @@ protected:
   BackEnd b;
   ServiceBase::shp s;
   ;
-  in_process_invoker invoker;
+  InProcessInvoker invoker;
   basic_protocol::HelloRequest hello;
   basic_protocol::HelloResponse hres;
   
@@ -360,7 +361,7 @@ protected:
   BackEnd b;
   ServiceBase::shp s;
   ;
-  in_process_invoker invoker;
+  InProcessInvoker invoker;
   basic_protocol::HelloRequest hello;
   basic_protocol::HelloResponse hres;
   
@@ -431,7 +432,7 @@ protected:
   basic_protocol::DestinationConnectionType   destination;
 
   BackEnd b;
-  in_process_invoker invoker;
+  InProcessInvoker invoker;
   ServiceBase::shp s;
 
   basic_protocol::HelloRequest hello;
@@ -679,7 +680,7 @@ protected:
   BackEnd b;
   ServiceBase::shp s;
   ;
-  in_process_invoker invoker;
+  InProcessInvoker invoker;
   basic_protocol::HelloRequest hello;
   basic_protocol::HelloResponse hres;
   
@@ -794,7 +795,7 @@ public:
   BackEnd b;
   ServiceBase::shp s;
   
-  in_process_invoker invoker;
+  InProcessInvoker invoker;
   basic_protocol::HelloRequest hello;
   basic_protocol::HelloResponse hres;
 };
