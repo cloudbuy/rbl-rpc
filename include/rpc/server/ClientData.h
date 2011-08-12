@@ -33,7 +33,9 @@ namespace rubble { namespace rpc {
   class ClientData
   {
   public:
-    typedef boost::shared_ptr<ClientData> shp;
+    typedef boost::shared_ptr<ClientData> shptr;
+    typedef boost::weak_ptr<ClientData>   wptr;
+    typedef ClientData *                  ptr;
 
     ClientData() 
       : m_flags(0),

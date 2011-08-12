@@ -119,21 +119,18 @@ class HelloTest : public ::testing::Test
 {
 public:
   HelloTest()
-    : b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL),
+    : b(basic_protocol::SOURCE_RELAY , basic_protocol::TARGET_MARSHALL),
       s(new test_service_one<test_service_one_impl>()),
-      invoker() {}
+      invoker(b) {}
   protected:
   virtual void SetUp() 
   {
     b.register_and_init_service(s);
     b.pool_size(1);
     b.start();
-    
-    b.connect(invoker.client_data);
   }
   virtual void TearDown()
   {
-    b.shutdown();
   } 
 
   void hello_invoke()
@@ -159,7 +156,6 @@ public:
 
   BackEnd b;
   ServiceBase::shp s;
-  ;
   in_process_invoker  invoker;
   basic_protocol::HelloRequest hello;
   basic_protocol::HelloResponse hres;
@@ -238,7 +234,7 @@ public:
   MissingIdTest()
     : b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL),
       s(new test_service_one<test_service_one_impl>()),
-      invoker() {}
+      invoker(b) {}
 protected:
 
   virtual void SetUp() 
@@ -249,8 +245,6 @@ protected:
     b.register_and_init_service(s);
     b.pool_size(1);
     b.start();
-    
-    b.connect(invoker.client_data);
   
     hello.set_source_type( source);
     hello.set_expected_target( destination); 
@@ -285,7 +279,6 @@ protected:
  
   virtual void TearDown()
   {
-    b.shutdown();
   } 
 
   basic_protocol::SourceConnectionType        source;
@@ -321,7 +314,7 @@ public:
   ListTest()
     : b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL),
       s(new test_service_one<test_service_one_impl>()),
-      invoker() {}
+      invoker(b) {}
 protected:
 
   virtual void SetUp() 
@@ -333,8 +326,6 @@ protected:
     b.pool_size(1);
     b.start();
     
-    b.connect(invoker.client_data);
-  
     hello.set_source_type( source);
     hello.set_expected_target( destination); 
     hello.set_node_name("test_client");
@@ -361,7 +352,6 @@ protected:
   
   virtual void TearDown()
   {
-    b.shutdown();
   } 
 
   basic_protocol::SourceConnectionType        source;
@@ -402,7 +392,12 @@ public:
   SubscribeTests()
     : b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL),
       s(new test_service_one<test_service_one_impl>()),
-      invoker() {}
+      invoker(b) {}
+
+  ~SubscribeTests()
+  {
+    //b.shutdown();
+  }
 protected:
 
   virtual void SetUp() 
@@ -414,8 +409,6 @@ protected:
     b.pool_size(1);
     b.start();
     
-    b.connect(invoker.client_data);
-  
     hello.set_source_type( source);
     hello.set_expected_target( destination); 
     hello.set_node_name("test_client");
@@ -430,7 +423,7 @@ protected:
   
   virtual void TearDown()
   {
-    b.shutdown();
+
   } 
 
  
@@ -438,9 +431,9 @@ protected:
   basic_protocol::DestinationConnectionType   destination;
 
   BackEnd b;
-  ServiceBase::shp s;
-  ;
   in_process_invoker invoker;
+  ServiceBase::shp s;
+
   basic_protocol::HelloRequest hello;
   basic_protocol::HelloResponse hres;
 };
@@ -503,8 +496,10 @@ TEST_F(SubscribeTests, subscribe_test)
   EXPECT_EQ(res.subscribe_result_string().compare("QQ"),0);
 }
 
+
 TEST_F(SubscribeTests, double_subscribe_test)
 {
+  
   basic_protocol::SubscribeServiceRequest req;
   basic_protocol::SubscribeServiceResponse res;
 
@@ -619,7 +614,7 @@ public:
   CookieTest()
     : b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL),
       s(new test_service_one<test_service_cookie_test>()),
-      invoker() {}
+      invoker(b) {}
 protected:
 
   virtual void SetUp() 
@@ -631,8 +626,6 @@ protected:
     b.pool_size(1);
     b.start();
     
-    b.connect(invoker.client_data);
-  
     hello.set_source_type( source);
     hello.set_expected_target( destination); 
     hello.set_node_name("test_client");
@@ -678,7 +671,6 @@ protected:
   
   virtual void TearDown()
   {
-    b.shutdown();
   } 
 
   basic_protocol::SourceConnectionType        source;
@@ -710,14 +702,14 @@ TEST_F(CookieTest, cookie_dc_test)
 
   const ClientServiceCookies & c_csc = static_cast<const BackEnd *>(&b)->cookies();
   
-  EXPECT_FALSE( c_csc.contains_cookie(1,invoker.client_data.get()) == ClientServiceCookies::COOKIE_ABSENT);
+  EXPECT_FALSE( c_csc.contains_cookie(1,invoker.client_data) == ClientServiceCookies::COOKIE_ABSENT);
   
   b.disconect(invoker.client_data);
   EXPECT_TRUE(s__->unsubscribe_sentinel);
   EXPECT_TRUE(s__->sentinel);
 
   
-  EXPECT_TRUE( c_csc.contains_cookie(1,invoker.client_data.get()) == ClientServiceCookies::COOKIE_ABSENT);
+  EXPECT_TRUE( c_csc.contains_cookie(1,invoker.client_data) == ClientServiceCookies::COOKIE_ABSENT);
 }
 
 TEST_F(CookieTest, cookie_unsubscrive_test)
@@ -736,12 +728,12 @@ TEST_F(CookieTest, cookie_unsubscrive_test)
 
   const ClientServiceCookies & c_csc = static_cast<const BackEnd *>(&b)->cookies();
   
-  EXPECT_FALSE( c_csc.contains_cookie(1,invoker.client_data.get()) == ClientServiceCookies::COOKIE_ABSENT);
+  EXPECT_FALSE( c_csc.contains_cookie(1,invoker.client_data) == ClientServiceCookies::COOKIE_ABSENT);
  
 
   b.invoke(invoker); 
 
-  EXPECT_TRUE( c_csc.contains_cookie(1,invoker.client_data.get()) == ClientServiceCookies::COOKIE_ABSENT);
+  EXPECT_TRUE( c_csc.contains_cookie(1,invoker.client_data) == ClientServiceCookies::COOKIE_ABSENT);
 
   // now test get a new cookie for the same service, the fact that it should
   // result with a cookie in the uninitialized state.
@@ -759,25 +751,23 @@ TEST_F(CookieTest, cookie_unsubscrive_test)
   
   EXPECT_EQ(invoker.client_data->error_code().value(), error_codes::RBL_BACKEND_INVOKE_CLIENT_NOT_SUBSCRIBED);
 }
+
 class ListMethodTest : public ::testing::Test
 {
 public:
   ListMethodTest()
     : b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL),
       s(new test_service_one<test_service_one_impl>()),
-      invoker() {}
+      invoker(b) {}
   protected:
   virtual void SetUp() 
   {
     b.register_and_init_service(s);
     b.pool_size(1);
     b.start();
-    
-    b.connect(invoker.client_data);
   }
   virtual void TearDown()
   {
-    b.shutdown();
   } 
 
   void hello_invoke()

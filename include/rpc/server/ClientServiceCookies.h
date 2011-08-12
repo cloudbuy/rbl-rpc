@@ -52,9 +52,11 @@ namespace rubble { namespace rpc {
 
     void destroy_cookie()
     {
-      BOOST_ASSERT(( m_cookie_base != NULL));
-      delete m_cookie_base;
-      m_cookie_base=NULL;
+      if( m_cookie_base != NULL)
+      {
+        delete m_cookie_base;
+        m_cookie_base=NULL;
+      }
     }
   private:
     ClientCookieBase * m_cookie_base;

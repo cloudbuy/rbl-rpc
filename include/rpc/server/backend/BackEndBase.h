@@ -14,63 +14,7 @@
 
 
 namespace rubble { namespace rpc {
-  struct in_process_invoker
-  {
-    struct notification_object_
-    {  
-      notification_object_()
-      {
-        reset();
-      }
-      void reset()
-      {
-        ready = false;
-      }
-      bool ready;
-      boost::mutex mutex;
-      boost::condition_variable cond;
-    };
-
-    in_process_invoker()
-      : client_data(new ClientData()),
-        notification_object(new notification_object_()) {}
-
-    void reset()
-    {
-      notification_object->reset();
-      client_data->request().Clear();
-      client_data->response().Clear();
-      client_data->error_code().clear();
-      BOOST_ASSERT_MSG( client_data->is_rpc_active() == false, 
-        "THE FLAG THAT REPRESENTS ACTIVE RPC SHOULD NOT BE SET WHEN RESETING AN OBJECT FOR RPC");
-    }
-    
-    void operator() ()
-    {
-      
-      service->dispatch(*client_cookie,*client_data.get());
-
-      client_data->end_rpc();
-
-      boost::lock_guard<boost::mutex> lock(notification_object->mutex);
-      notification_object->ready=true;
-      notification_object->cond.notify_one();
-    }
-
-
-    void after_post()
-    {
-      boost::unique_lock<boost::mutex> lock(notification_object->mutex);
-      if(!notification_object->ready)
-        notification_object->cond.wait(lock);
-    }
-
-    ClientData::shp client_data;
-    boost::shared_ptr<notification_object_> notification_object;
-    ClientCookie * client_cookie;
-    ServiceBase::shp service;
-  };
-
+  
   class BackEnd
   {
   public:
@@ -78,6 +22,7 @@ namespace rubble { namespace rpc {
 
     BackEnd    (  basic_protocol::SourceConnectionType       source_type,
                   basic_protocol::DestinationConnectionType backend_type);
+    ~BackEnd();
 
     void pool_size(int pool_size_in) { m_pool_size = pool_size_in; }
     bool is_sealed() { return m_is_sealed; } 
@@ -89,8 +34,8 @@ namespace rubble { namespace rpc {
     bool shutdown();
   
  
-    void connect(ClientData::shp & client_data);
-    void disconect(ClientData::shp & client_data);
+    void connect(ClientData::ptr   client_data);
+    void disconect(ClientData::ptr client_data);
 
     // invocation functions
     
@@ -118,11 +63,12 @@ namespace rubble { namespace rpc {
     boost::thread_group                                 m_thread_group;
     boost::system::error_code                           m_ec;
     ClientServiceCookies                                m_client_service_cookies;
-    std::set<ClientData::shp>                           m_connected_clients;    
+    std::set<ClientData::ptr>                           m_connected_clients;    
  
     common::OidContainer<common::Oid, ServiceBase::shp> m_services;
     boost::uint16_t                                     m_service_count;
     bool                                                m_is_sealed;
+    bool                                                m_has_shutdown;
  
     boost::asio::io_service                             m_io_service;
     boost::asio::io_service::work                       m_work;
@@ -174,7 +120,96 @@ namespace rubble { namespace rpc {
   private:
      BackEnd * m_backend;
   };
+
+  struct in_process_invoker
+  {
+    struct notification_object_
+    { 
+      typedef notification_object_ * ptr; 
+      notification_object_()
+      {
+        reset();
+      }
+      void reset()
+      {
+        ready = false;
+      }
+      bool ready;
+      boost::mutex mutex;
+      boost::condition_variable cond;
+    };
+
+    in_process_invoker(BackEnd & b_in)
+      : is_primary(true),
+        client_data(new ClientData()),
+        b(b_in),
+        notification_object(new notification_object_()) 
+    {
+      b.connect(client_data);
+    }
+
+    in_process_invoker(const in_process_invoker & rhs)
+      : is_primary(false),
+        client_data(rhs.client_data),
+        notification_object(rhs.notification_object),
+        client_cookie(rhs.client_cookie),
+        service(rhs.service),
+        b(rhs.b)
+    {
+    }
+
+    ~in_process_invoker()
+    {
+      if(is_primary)
+      {
+
+        b.disconect(client_data);
+        delete client_data;
+        delete notification_object;
+      }
+        
+    }
   
+    void reset()
+    {
+      notification_object->reset();
+      client_data->request().Clear();
+      client_data->response().Clear();
+      client_data->error_code().clear();
+      BOOST_ASSERT_MSG( client_data->is_rpc_active() == false, 
+        "THE FLAG THAT REPRESENTS ACTIVE "
+        "RPC SHOULD NOT BE SET WHEN RESETING AN OBJECT FOR RPC");
+    }
+    
+    void operator() ()
+    {
+
+      service->dispatch(*client_cookie,*client_data);
+
+      client_data->end_rpc();
+
+      boost::lock_guard<boost::mutex> lock(notification_object->mutex);
+      notification_object->ready=true;
+      notification_object->cond.notify_one();
+
+    }
+
+
+    void after_post()
+    {
+      boost::unique_lock<boost::mutex> lock(notification_object->mutex);
+      if(!notification_object->ready)
+        notification_object->cond.wait(lock);
+    }
+    
+    bool is_primary;
+    ClientData::ptr client_data;
+    notification_object_::ptr notification_object;
+    ClientCookie * client_cookie;
+    ServiceBase::ptr service;
+    BackEnd & b;
+  };
+
   template< typename Invoker>
   void BackEnd::invoke(Invoker & i)
   {
@@ -193,10 +228,10 @@ namespace rubble { namespace rpc {
         return; 
       }
     
-      i.service = *service;      
+      i.service = service->get();      
 
       // check if method ordinal is defined in the service
-      if( ! (*service)->contains_function_at_ordinal( request.request_ordinal() )) 
+      if( ! i.service->contains_function_at_ordinal( request.request_ordinal() )) 
       {
         i.client_data->error_code().assign 
           ( error_codes::RBL_BACKEND_INVOKE_NO_REQUEST_WITH_ORDINAL_ERROR,
@@ -208,7 +243,7 @@ namespace rubble { namespace rpc {
       { // lock_scope_lock
         boost::lock_guard<boost::recursive_mutex> lock(m_mutex);
         m_client_service_cookies.create_or_retrieve_cookie(
-          request.service_ordinal(), i.client_data.get(),&i.client_cookie);
+          request.service_ordinal(), i.client_data,&i.client_cookie);
       }
       
       // Check if subscribed, service 0 does not require an explicit subscribe 

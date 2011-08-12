@@ -11,6 +11,7 @@ namespace rubble { namespace rpc {
   {
   public:
     typedef boost::shared_ptr<ServiceBase> shp;
+    typedef ServiceBase *                  ptr;
 
     virtual ~ServiceBase(){};
 

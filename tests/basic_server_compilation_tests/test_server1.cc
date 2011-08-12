@@ -1,6 +1,5 @@
 #include <rpc/server/backend/BackEndBase.h>
 #include <boost/thread.hpp>
-//#include <rpc/TcpServer.h>
 #include <boost/scoped_array.hpp>
 
 using namespace rubble::rpc;

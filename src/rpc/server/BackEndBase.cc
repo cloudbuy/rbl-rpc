@@ -25,6 +25,12 @@ namespace rubble { namespace rpc {
     }
   //-------------------------------------------------------------------------//
 
+  // ~BackEnd /////////////////////////////////////////////////////////////////
+  BackEnd::~BackEnd()
+  {
+  }
+  //-------------------------------------------------------------------------//
+
   // start ////////////////////////////////////////////////////////////////////
   void BackEnd::start()
   {
@@ -91,7 +97,9 @@ namespace rubble { namespace rpc {
   {
     m_thread_group.join_all();
   }
-
+  //-------------------------------------------------------------------------//
+  
+  // shutdown /////////////////////////////////////////////////////////////////
   bool BackEnd::shutdown()
   {
     BOOST_ASSERT_MSG(m_is_sealed, 
@@ -129,7 +137,7 @@ namespace rubble { namespace rpc {
   //-------------------------------------------------------------------------//
   
   // connect //////////////////////////////////////////////////////////////////
-  void BackEnd::connect(ClientData::shp & client_data)
+  void BackEnd::connect(ClientData::ptr client_data)
   {
     boost::lock_guard<boost::recursive_mutex> lock(m_mutex);
     m_connected_clients.insert(client_data);
@@ -137,7 +145,7 @@ namespace rubble { namespace rpc {
   //-------------------------------------------------------------------------//
 
   // disconect ////////////////////////////////////////////////////////////////
-  void BackEnd::disconect(ClientData::shp & client_data)
+  void BackEnd::disconect(ClientData::ptr client_data)
   {
     boost::lock_guard<boost::recursive_mutex> lock(m_mutex);
     
@@ -149,16 +157,16 @@ namespace rubble { namespace rpc {
     for(int i = 1; i < m_sz; ++i)
     {
       m_client_service_cookies.create_or_retrieve_cookie(
-        i, client_data.get(),&client_cookie);
+        i, client_data,&client_cookie);
 
-      s = * m_services[i];      
+      s = *(m_services[i]);
 
       if( client_cookie->is_subscribed())
       {
         s->unsubscribe(*client_cookie, *client_data);
       }
       client_cookie->destroy_cookie();
-      m_client_service_cookies.delete_cookie(i,client_data.get());
+      m_client_service_cookies.delete_cookie(i,client_data);
     }
  
     m_connected_clients.erase(client_data);
