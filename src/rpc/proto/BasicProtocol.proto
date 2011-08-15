@@ -19,9 +19,16 @@ message ClientRequest
   required string request_string  = 3;
 };
 
+enum ClientResponseErrorType
+{
+  REQUEST_SUCCESS = 0;
+  NOT_ACCEPTING_REQUESTS=1;
+};
+
 message ClientResponse
 {
-  required string response_string = 1;
+  optional string response_string = 1;
+  required uint32 error = 2;
 };
 
 message HelloRequest

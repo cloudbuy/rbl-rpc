@@ -14,7 +14,8 @@ namespace rubble { namespace rpc {
       m_services(),
       m_is_sealed(false),
       m_service_count(0),
-      m_rpc_count(0) 
+      m_rpc_count(0),
+      m_accepting_requests(false) 
 
     {
       basic_protocol::basic_protocol<BasicProtocolImpl> * bp =
@@ -58,6 +59,11 @@ namespace rubble { namespace rpc {
     {
       m_thread_group.create_thread(
         boost::bind( &boost::asio::io_service::run, &m_io_service) );
+    }
+    
+    {
+      boost::lock_guard<boost::timed_mutex> act_lock(m_rpc_activity_mutex);
+      m_accepting_requests = true;
     }
   }
   //-------------------------------------------------------------------------//

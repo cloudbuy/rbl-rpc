@@ -76,7 +76,8 @@ namespace rubble { namespace rpc {
     
     boost::timed_mutex                                  m_rpc_activity_mutex;
     boost::uint32_t                                     m_rpc_count;
-    bool                                                m_is_shutting_down;
+    bool                                                m_accepting_requests;
+    
   };
 
   
@@ -129,6 +130,11 @@ namespace rubble { namespace rpc {
   client_data->start_rpc();                                                     \
   {                                                                             \
     boost::lock_guard<boost::timed_mutex> act_lock(m_rpc_activity_mutex);       \
+    if( ! m_accepting_requests)                                                 \
+    {                                                                           \
+      client_data->error_code().assign(                                         \
+        error_codes::RBL_BACKEND_NOT_ACCEPTING_REQUESTS, rpc_backend_error);    \
+    }                                                                           \
     m_rpc_count++;                                                              \
   }
 
@@ -155,71 +161,71 @@ namespace rubble { namespace rpc {
   template< typename Invoker>
   void BackEnd::invoke(Invoker & i)
   {
-      RBL_RPC_START_RPC(i.client_data);      
+    RBL_RPC_START_RPC(i.client_data);      
 
-      basic_protocol::ClientRequest & request = i.client_data->request();
- 
-      ServiceBase::shp * service = 
-        m_services[request.service_ordinal()];
-      // check if service with ordinal exists
-      if(service == NULL)
-      {
-        i.client_data->error_code().assign 
-          ( error_codes::RBL_BACKEND_INVOKE_NO_SERVICE_WITH_ORDINAL_ERROR,
-            rpc_backend_error);
-        RBL_RPC_ERROR_RETURN_RPC(i.client_data);
-      }
-    
-      i.service = service->get();      
+    basic_protocol::ClientRequest & request = i.client_data->request();
 
-      // check if method ordinal is defined in the service
-      if( ! i.service->contains_function_at_ordinal( request.request_ordinal() )) 
-      {
-        i.client_data->error_code().assign 
-          ( error_codes::RBL_BACKEND_INVOKE_NO_REQUEST_WITH_ORDINAL_ERROR,
-            rpc_backend_error);
-        
-        RBL_RPC_ERROR_RETURN_RPC(i.client_data);
-      }
-    
-      { // lock_scope_lock
-        boost::lock_guard<boost::recursive_mutex> lock(m_mutex);
-        m_client_service_cookies.create_or_retrieve_cookie(
-          request.service_ordinal(), i.client_data,&i.client_cookie);
-      }
-      
-      // Check if subscribed, service 0 does not require an explicit subscribe 
-      // event Subscription will be done implicetly
-      if(request.service_ordinal() != 0)       
-      {
-        if( !i.client_cookie->is_subscribed())
-        {
-          i.client_data->error_code().assign(
-            error_codes::RBL_BACKEND_INVOKE_CLIENT_NOT_SUBSCRIBED, 
-            rpc_backend_error); 
-          RBL_RPC_ERROR_RETURN_RPC(i.client_data);
-        }
-      }
-      
-      if(request.service_ordinal() == 0 && request.request_ordinal() == 0)
-      {
-        if(i.client_data->is_client_established())
-        {  
-          i.client_data->error_code().assign(
-            error_codes::RBL_BACKEND_ALLREADY_ESTABLISHED,
-            rpc_backend_error);
-          basic_protocol::HelloResponse hres;
-          hres.set_error_type(basic_protocol::CLIENT_ALLREADY_ESTABLISHED);
-          hres.SerializeToString( 
-            i.client_data->response().mutable_response_string());
-
-          i.client_data->request_disconect();
-          RBL_RPC_ERROR_RETURN_RPC(i.client_data);
-        }
-      }
-      m_io_service.post(i);
-      i.after_post();
+    ServiceBase::shp * service = 
+      m_services[request.service_ordinal()];
+    // check if service with ordinal exists
+    if(service == NULL)
+    {
+      i.client_data->error_code().assign 
+        ( error_codes::RBL_BACKEND_INVOKE_NO_SERVICE_WITH_ORDINAL_ERROR,
+          rpc_backend_error);
+      RBL_RPC_ERROR_RETURN_RPC(i.client_data);
     }
+  
+    i.service = service->get();      
+
+    // check if method ordinal is defined in the service
+    if( ! i.service->contains_function_at_ordinal( request.request_ordinal() )) 
+    {
+      i.client_data->error_code().assign 
+        ( error_codes::RBL_BACKEND_INVOKE_NO_REQUEST_WITH_ORDINAL_ERROR,
+          rpc_backend_error);
+      
+      RBL_RPC_ERROR_RETURN_RPC(i.client_data);
+    }
+  
+    { // lock_scope_lock
+      boost::lock_guard<boost::recursive_mutex> lock(m_mutex);
+      m_client_service_cookies.create_or_retrieve_cookie(
+        request.service_ordinal(), i.client_data,&i.client_cookie);
+    }
+    
+    // Check if subscribed, service 0 does not require an explicit subscribe 
+    // event Subscription will be done implicetly
+    if(request.service_ordinal() != 0)       
+    {
+      if( !i.client_cookie->is_subscribed())
+      {
+        i.client_data->error_code().assign(
+          error_codes::RBL_BACKEND_INVOKE_CLIENT_NOT_SUBSCRIBED, 
+          rpc_backend_error); 
+        RBL_RPC_ERROR_RETURN_RPC(i.client_data);
+      }
+    }
+    
+    if(request.service_ordinal() == 0 && request.request_ordinal() == 0)
+    {
+      if(i.client_data->is_client_established())
+      {  
+        i.client_data->error_code().assign(
+          error_codes::RBL_BACKEND_ALLREADY_ESTABLISHED,
+          rpc_backend_error);
+        basic_protocol::HelloResponse hres;
+        hres.set_error_type(basic_protocol::CLIENT_ALLREADY_ESTABLISHED);
+        hres.SerializeToString( 
+          i.client_data->response().mutable_response_string());
+
+        i.client_data->request_disconect();
+        RBL_RPC_ERROR_RETURN_RPC(i.client_data);
+      }
+    }
+    m_io_service.post(i);
+    i.after_post();
+  }
 
 } }
 #endif
