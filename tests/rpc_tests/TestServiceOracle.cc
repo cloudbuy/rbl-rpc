@@ -833,6 +833,77 @@ TEST_F(ListMethodTest, basic_protocol_messages)
   EXPECT_EQ( res.methods(4).service_name(),"list_methods");
 }
 
+class NotAcceptingTests : public ::testing::Test
+{
+public:
+  NotAcceptingTests()
+    : b(basic_protocol::SOURCE_RELAY , basic_protocol::TARGET_MARSHALL),
+      s(new test_service_one<test_service_one_impl>()),
+      invoker(b) {}
+  protected:
+  virtual void SetUp() 
+  {
+    b.register_and_init_service(s);
+    b.pool_size(1);
+  }
+  virtual void TearDown()
+  {
+  } 
+
+  void hello_invoke()
+  {
+    set_client_source(basic_protocol::SOURCE_RELAY);
+    set_client_destination(basic_protocol::TARGET_MARSHALL);
+
+    ASSERT_FALSE(invoker.client_data->is_rpc_active()); 
+    
+    EXPECT_EQ(invoker.client_data->name(), "");
+
+    invoker.reset();
+    hello.set_source_type( source);
+    hello.set_expected_target( destination); 
+    hello.set_node_name("test_client");
+  
+    invoker.client_data->request().Clear(); 
+    invoker.client_data->request().set_service_ordinal(0);
+    invoker.client_data->request().set_request_ordinal(0);
+    hello.SerializeToString(invoker.client_data->request().mutable_request_string());
+    b.invoke(invoker);
+  }  
+  void set_client_source(basic_protocol::SourceConnectionType s_in)
+    { source = s_in; }
+  void set_client_destination(basic_protocol::DestinationConnectionType d_in)
+    { destination = d_in; }
+
+  basic_protocol::SourceConnectionType        source;
+  basic_protocol::DestinationConnectionType   destination;
+
+  BackEnd b;
+  ServiceBase::shp s;
+  InProcessInvoker  invoker;
+  basic_protocol::HelloRequest hello;
+  basic_protocol::HelloResponse hres;
+};
+
+TEST_F(NotAcceptingTests, before_backend_start)
+{
+  hello_invoke();
+  EXPECT_EQ(invoker.client_data->response().error(), basic_protocol::NOT_ACCEPTING_REQUESTS);
+  EXPECT_EQ(invoker.client_data->error_code().value(), error_codes::RBL_BACKEND_NOT_ACCEPTING_REQUESTS);
+}
+
+TEST_F(NotAcceptingTests, after_shutdown_test)
+{
+  b.start();
+  b.shutdown(); 
+  hello_invoke();
+  
+  EXPECT_EQ(invoker.client_data->response().error(), basic_protocol::NOT_ACCEPTING_REQUESTS);
+  EXPECT_EQ(invoker.client_data->error_code().value(), error_codes::RBL_BACKEND_NOT_ACCEPTING_REQUESTS);
+}
+
+
+
 #ifdef ISOLATED_GTEST_COMPILE
 int main(int argc,char ** argv)
 {

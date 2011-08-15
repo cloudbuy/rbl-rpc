@@ -113,9 +113,16 @@ namespace rubble { namespace rpc {
   {
     BOOST_ASSERT_MSG(m_is_sealed, 
       "shutdown should not be run on an unsealed backend");
+    {
+      boost::lock_guard<boost::timed_mutex> act_lock(m_rpc_activity_mutex);
+      m_accepting_requests = false;
+    }
+
     m_io_service.stop();
     m_thread_group.join_all();
-
+ 
+    // TODO disconect client block.
+ 
     for(int i=0;i<m_services.occupied_size();++i)
     {
       ServiceBase::shp * sb_shp = m_services[i];
@@ -162,22 +169,26 @@ namespace rubble { namespace rpc {
 
     ClientCookie * client_cookie;
     ServiceBase::shp s;
-
-    for(int i = 1; i < m_sz; ++i)
+   
+    // if the backend is up and running, clean up any subscriptions for the 
+    // client. 
+    if(m_is_sealed && !m_io_service.stopped() )
     {
-      m_client_service_cookies.create_or_retrieve_cookie(
-        i, client_data,&client_cookie);
-
-      s = *(m_services[i]);
-
-      if( client_cookie->is_subscribed())
+      for(int i = 1; i < m_sz; ++i)
       {
-        s->unsubscribe(*client_cookie, *client_data);
+        m_client_service_cookies.create_or_retrieve_cookie(
+          i, client_data,&client_cookie);
+
+        s = *(m_services[i]);
+
+        if( client_cookie->is_subscribed())
+        {
+          s->unsubscribe(*client_cookie, *client_data);
+        }
+        client_cookie->destroy_cookie();
+        m_client_service_cookies.delete_cookie(i,client_data);
       }
-      client_cookie->destroy_cookie();
-      m_client_service_cookies.delete_cookie(i,client_data);
     }
- 
     m_connected_clients.erase(client_data);
   }
   //-------------------------------------------------------------------------//

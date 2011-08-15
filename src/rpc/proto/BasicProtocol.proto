@@ -28,7 +28,7 @@ enum ClientResponseErrorType
 message ClientResponse
 {
   optional string response_string = 1;
-  required uint32 error = 2;
+  required ClientResponseErrorType error = 2 [ default = REQUEST_SUCCESS];
 };
 
 message HelloRequest

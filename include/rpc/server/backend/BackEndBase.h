@@ -127,14 +127,16 @@ namespace rubble { namespace rpc {
   };
 
 #define RBL_RPC_START_RPC(client_data)                                          \
-  client_data->start_rpc();                                                     \
   {                                                                             \
     boost::lock_guard<boost::timed_mutex> act_lock(m_rpc_activity_mutex);       \
     if( ! m_accepting_requests)                                                 \
     {                                                                           \
       client_data->error_code().assign(                                         \
         error_codes::RBL_BACKEND_NOT_ACCEPTING_REQUESTS, rpc_backend_error);    \
+      client_data->response().set_error(basic_protocol::NOT_ACCEPTING_REQUESTS);\
+      return;                                                                   \
     }                                                                           \
+    client_data->start_rpc();                                                   \
     m_rpc_count++;                                                              \
   }
 
