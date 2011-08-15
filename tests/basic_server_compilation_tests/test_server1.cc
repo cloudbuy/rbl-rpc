@@ -1,4 +1,4 @@
-#include <rpc/server/backend/BackEndBase.h>
+#include <rpc/backend/BackEndBase.h>
 #include <boost/thread.hpp>
 #include <boost/scoped_array.hpp>
 

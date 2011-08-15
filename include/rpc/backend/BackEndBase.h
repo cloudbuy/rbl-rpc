@@ -1,9 +1,9 @@
 #ifndef RBL_RPC_BACKEND
 #define RBL_RPC_BACKEND
 #include <rpc/common/rpc_errors.h>
-#include <rpc/server/ClientData.h>
-#include <rpc/server/ClientServiceCookies.h>
-#include <rpc/server/ServiceBase.h>
+#include <rpc/backend/ClientData.h>
+#include <rpc/backend/ClientServiceCookies.h>
+#include <rpc/backend/ServiceBase.h>
 #include <rpc/proto/BasicProtocol-server.rblrpc.h>
 
 #include <boost/asio.hpp>

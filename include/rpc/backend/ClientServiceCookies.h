@@ -1,6 +1,6 @@
 #ifndef RBL_RPC_CLIENT_COOKIES_H
 #define RBL_RPC_CLIENT_COOKIES_H
-#include <rpc/server/ClientData.h>
+#include <rpc/backend/ClientData.h>
 #include <boost/foreach.hpp>
 #include <boost/assert.hpp>
 #include <map>

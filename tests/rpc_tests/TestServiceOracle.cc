@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
-#include <rpc/server/backend/BackEndBase.h>
-#include <rpc/server/backend/InProcessInvoker.h>
-#include <rpc/server/ClientServiceCookies.h>
+#include <rpc/backend/BackEndBase.h>
+#include <rpc/backend/InProcessInvoker.h>
+#include <rpc/backend/ClientServiceCookies.h>
 #include <rpc/proto/TestService-server.rblrpc.h>
 
 using namespace rubble::rpc;

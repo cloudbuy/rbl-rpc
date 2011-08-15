@@ -1,8 +1,7 @@
-#include <rpc/server/backend/BackEndBase.h>
+#include <rpc/backend/BackEndBase.h>
 
 namespace rubble { namespace rpc {
 // BackEnd ////////////////////////////////////////////////////////////////
-
   // BackEnd //////////////////////////////////////////////////////////////
   BackEnd::BackEnd( 
     basic_protocol::SourceConnectionType       source_type,
