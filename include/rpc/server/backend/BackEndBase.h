@@ -162,7 +162,7 @@ namespace rubble { namespace rpc {
   void BackEnd::invoke(Invoker & i)
   {
     RBL_RPC_START_RPC(i.client_data);      
-
+  
     basic_protocol::ClientRequest & request = i.client_data->request();
 
     ServiceBase::shp * service = 
@@ -223,6 +223,7 @@ namespace rubble { namespace rpc {
         RBL_RPC_ERROR_RETURN_RPC(i.client_data);
       }
     }
+//    std::cout << (*service)->name() << "::" << request.request_ordinal() << std::endl; 
     m_io_service.post(i);
     i.after_post();
   }

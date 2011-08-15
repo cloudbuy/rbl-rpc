@@ -30,6 +30,8 @@ namespace rubble { namespace rpc {
   // ~BackEnd /////////////////////////////////////////////////////////////////
   BackEnd::~BackEnd()
   {
+    if(m_is_sealed && !m_io_service.stopped() )
+      shutdown();
   }
   //-------------------------------------------------------------------------//
 

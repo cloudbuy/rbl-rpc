@@ -4,6 +4,7 @@
 #include <common/common.h>
 #include <rpc/proto/BasicProtocol.pb.h>
 #include <boost/shared_ptr.hpp>
+
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <list>

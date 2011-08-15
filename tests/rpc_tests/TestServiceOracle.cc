@@ -99,6 +99,7 @@ TEST(backed_tests,teardown_no_fail)
   BackEnd b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL);
   ServiceBase::shp s(new test_service_one<test_service_one_dest_no_fail>());
   b.register_and_init_service(s);
+
   
   b.pool_size(1);
   b.start();
@@ -237,7 +238,9 @@ public:
   MissingIdTest()
     : b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL),
       s(new test_service_one<test_service_one_impl>()),
-      invoker(b) {}
+      invoker(b) 
+  {
+  }
 protected:
 
   virtual void SetUp() 
@@ -248,7 +251,7 @@ protected:
     b.register_and_init_service(s);
     b.pool_size(1);
     b.start();
-  
+ 
     hello.set_source_type( source);
     hello.set_expected_target( destination); 
     hello.set_node_name("test_client");
@@ -282,6 +285,7 @@ protected:
  
   virtual void TearDown()
   {
+    
   } 
 
   basic_protocol::SourceConnectionType        source;

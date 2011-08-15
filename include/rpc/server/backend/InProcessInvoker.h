@@ -7,6 +7,7 @@ namespace rubble { namespace rpc {
     struct notification_object_
     { 
       typedef notification_object_ * ptr; 
+
       notification_object_()
       {
         reset();
