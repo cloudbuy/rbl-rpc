@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <rpc/backend/BackEndBase.h>
-#include <rpc/backend/InProcessInvoker.h>
+#include <rpc/invoker/InProcessInvoker.h>
 #include <rpc/backend/ClientServiceCookies.h>
 #include <rpc/proto/TestService-server.rblrpc.h>
 
@@ -809,6 +809,7 @@ public:
 //test the top 4 messages
 TEST_F(ListMethodTest, basic_protocol_messages)
 {
+  EXPECT_TRUE(b.is_useable());
   basic_protocol::ListMethodsRequest req;
   basic_protocol::ListMethodsResponse res;
 
@@ -890,6 +891,7 @@ TEST_F(NotAcceptingTests, before_backend_start)
   hello_invoke();
   EXPECT_EQ(invoker.client_data->response().error(), basic_protocol::NOT_ACCEPTING_REQUESTS);
   EXPECT_EQ(invoker.client_data->error_code().value(), error_codes::RBL_BACKEND_NOT_ACCEPTING_REQUESTS);
+  EXPECT_FALSE(b.is_useable());
 }
 
 TEST_F(NotAcceptingTests, after_shutdown_test)
@@ -900,9 +902,8 @@ TEST_F(NotAcceptingTests, after_shutdown_test)
   
   EXPECT_EQ(invoker.client_data->response().error(), basic_protocol::NOT_ACCEPTING_REQUESTS);
   EXPECT_EQ(invoker.client_data->error_code().value(), error_codes::RBL_BACKEND_NOT_ACCEPTING_REQUESTS);
+  EXPECT_FALSE(b.is_useable());
 }
-
-
 
 #ifdef ISOLATED_GTEST_COMPILE
 int main(int argc,char ** argv)

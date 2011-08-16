@@ -178,11 +178,11 @@ void create_client_service( Printer & gen_out, const ServiceDescriptor * sd)
 {
   int method_count = sd->method_count();
   gen_out.Indent();
-  gen_out.Print("class $CN$ : public rubble::rpc::ClientServiceSubscription \n{\n", "CN", sd->name());
+  gen_out.Print("class $CN$_client: public rubble::rpc::ClientServiceBase \n{\n", "CN", sd->name());
   gen_out.Print("public:\n");
   gen_out.Indent();
     // constructor
-    gen_out.Print("$CN$()\n  : ClientServiceSubscription($MC$)\n",
+    gen_out.Print("$CN$_client()\n  : ClientServiceBase($MC$)\n",
       "CN",sd->name(),
       "MC",boost::lexical_cast<std::string>(method_count) );
     gen_out.Print("{\n");
@@ -312,7 +312,7 @@ class RblRpcGenerator : public CppGenerator
       gen_out_c.Print("#define RBL_RPC_GEN_$STEM$_CLIENT_H\n\n", "STEM", stem);
 
       gen_out_c.Print("#include \"$incl$\" \n","incl", pbuf_name);
-      gen_out_c.Print("#include \"$incl$\" \n","incl", "rpc/client_rpc_common.h");
+      gen_out_c.Print("#include \"$incl$\" \n","incl", "rpc/client/ClientBase.h");
       gen_out_c.Print("#include <$incl$> \n\n","incl", "boost/cstdint.hpp");
 
       for(int i=0; i < ns_count;++i)

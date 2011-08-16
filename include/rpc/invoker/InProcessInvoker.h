@@ -56,7 +56,12 @@ namespace rubble { namespace rpc {
       }
         
     }
-  
+ 
+    bool is_useable()
+    {
+      return b.is_useable();       
+    }
+ 
     void reset()
     {
       notification_object->reset();

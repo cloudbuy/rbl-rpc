@@ -25,10 +25,11 @@ namespace rubble { namespace rpc {
     ~BackEnd();
 
     void pool_size(int pool_size_in) { m_pool_size = pool_size_in; }
-    bool is_sealed() { return m_is_sealed; } 
+    bool is_sealed() { return m_is_sealed; }
     void seal() { m_is_sealed = true;}
    
     void start();
+    bool is_useable();
     void end_rpc(ClientData::ptr client_data); 
     void register_and_init_service(ServiceBase::shp service);
     void block_till_termination();
