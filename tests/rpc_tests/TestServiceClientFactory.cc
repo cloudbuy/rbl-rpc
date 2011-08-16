@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <rpc/client/ClientServiceFactory.h>
-#include <rpc/backend/InProcessInvoker.h>
+#include <rpc/invoker/InProcessInvoker.h>
 
 TEST(client_factory, compilation_test)
 {

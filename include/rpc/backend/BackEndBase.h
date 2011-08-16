@@ -35,8 +35,8 @@ namespace rubble { namespace rpc {
     void block_till_termination();
     bool shutdown();
  
-    void connect(ClientData::ptr   client_data);
-    void disconect(ClientData::ptr client_data);
+    void connect(ClientData::shptr   client_data);
+    void disconect(ClientData::shptr client_data);
 
     // invocation functions
     
@@ -63,7 +63,7 @@ namespace rubble { namespace rpc {
     boost::thread_group                                 m_thread_group;
     boost::system::error_code                           m_ec;
     ClientServiceCookies                                m_client_service_cookies;
-    std::set<ClientData::ptr>                           m_connected_clients;    
+    std::set<ClientData::wptr>                          m_connected_clients;    
  
     common::OidContainer<common::Oid, ServiceBase::shp> m_services;
     boost::uint16_t                                     m_service_count;
@@ -164,19 +164,19 @@ namespace rubble { namespace rpc {
   template< typename Invoker>
   void BackEnd::invoke(Invoker & i)
   {
-    RBL_RPC_START_RPC(i.client_data);      
+    RBL_RPC_START_RPC(i.client_data());      
   
-    basic_protocol::ClientRequest & request = i.client_data->request();
+    basic_protocol::ClientRequest & request = i.client_data()->request();
 
     ServiceBase::shp * service = 
       m_services[request.service_ordinal()];
     // check if service with ordinal exists
     if(service == NULL)
     {
-      i.client_data->error_code().assign 
+      i.client_data()->error_code().assign 
         ( error_codes::RBL_BACKEND_INVOKE_NO_SERVICE_WITH_ORDINAL_ERROR,
           rpc_backend_error);
-      RBL_RPC_ERROR_RETURN_RPC(i.client_data);
+      RBL_RPC_ERROR_RETURN_RPC(i.client_data());
     }
   
     i.service = service->get();      
@@ -184,17 +184,17 @@ namespace rubble { namespace rpc {
     // check if method ordinal is defined in the service
     if( ! i.service->contains_function_at_ordinal( request.request_ordinal() )) 
     {
-      i.client_data->error_code().assign 
+      i.client_data()->error_code().assign 
         ( error_codes::RBL_BACKEND_INVOKE_NO_REQUEST_WITH_ORDINAL_ERROR,
           rpc_backend_error);
       
-      RBL_RPC_ERROR_RETURN_RPC(i.client_data);
+      RBL_RPC_ERROR_RETURN_RPC(i.client_data());
     }
   
     { // lock_scope_lock
       boost::lock_guard<boost::recursive_mutex> lock(m_mutex);
       m_client_service_cookies.create_or_retrieve_cookie(
-        request.service_ordinal(), i.client_data,&i.client_cookie);
+        request.service_ordinal(), i.client_data().get(),&i.client_cookie);
     }
     
     // Check if subscribed, service 0 does not require an explicit subscribe 
@@ -203,27 +203,27 @@ namespace rubble { namespace rpc {
     {
       if( !i.client_cookie->is_subscribed())
       {
-        i.client_data->error_code().assign(
+        i.client_data()->error_code().assign(
           error_codes::RBL_BACKEND_INVOKE_CLIENT_NOT_SUBSCRIBED, 
           rpc_backend_error); 
-        RBL_RPC_ERROR_RETURN_RPC(i.client_data);
+        RBL_RPC_ERROR_RETURN_RPC(i.client_data());
       }
     }
     
     if(request.service_ordinal() == 0 && request.request_ordinal() == 0)
     {
-      if(i.client_data->is_client_established())
+      if(i.client_data()->is_client_established())
       {  
-        i.client_data->error_code().assign(
+        i.client_data()->error_code().assign(
           error_codes::RBL_BACKEND_ALLREADY_ESTABLISHED,
           rpc_backend_error);
         basic_protocol::HelloResponse hres;
         hres.set_error_type(basic_protocol::CLIENT_ALLREADY_ESTABLISHED);
         hres.SerializeToString( 
-          i.client_data->response().mutable_response_string());
+          i.client_data()->response().mutable_response_string());
 
-        i.client_data->request_disconect();
-        RBL_RPC_ERROR_RETURN_RPC(i.client_data);
+        i.client_data()->request_disconect();
+        RBL_RPC_ERROR_RETURN_RPC(i.client_data());
       }
     }
 //    std::cout << (*service)->name() << "::" << request.request_ordinal() << std::endl; 

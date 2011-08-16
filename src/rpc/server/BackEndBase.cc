@@ -160,7 +160,7 @@ namespace rubble { namespace rpc {
   //-------------------------------------------------------------------------//
   
   // connect //////////////////////////////////////////////////////////////////
-  void BackEnd::connect(ClientData::ptr client_data)
+  void BackEnd::connect(ClientData::shptr client_data)
   {
     boost::lock_guard<boost::recursive_mutex> lock(m_mutex);
     m_connected_clients.insert(client_data);
@@ -168,7 +168,7 @@ namespace rubble { namespace rpc {
   //-------------------------------------------------------------------------//
 
   // disconect ////////////////////////////////////////////////////////////////
-  void BackEnd::disconect(ClientData::ptr client_data)
+  void BackEnd::disconect(ClientData::shptr client_data)
   {
     boost::lock_guard<boost::recursive_mutex> lock(m_mutex);
     
@@ -184,7 +184,7 @@ namespace rubble { namespace rpc {
       for(int i = 1; i < m_sz; ++i)
       {
         m_client_service_cookies.create_or_retrieve_cookie(
-          i, client_data,&client_cookie);
+          i, client_data.get(),&client_cookie);
 
         s = *(m_services[i]);
 
@@ -193,7 +193,7 @@ namespace rubble { namespace rpc {
           s->unsubscribe(*client_cookie, *client_data);
         }
         client_cookie->destroy_cookie();
-        m_client_service_cookies.delete_cookie(i,client_data);
+        m_client_service_cookies.delete_cookie(i,client_data.get());
       }
     }
     m_connected_clients.erase(client_data);
