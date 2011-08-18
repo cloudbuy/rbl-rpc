@@ -33,7 +33,10 @@ namespace rubble { namespace rpc {
     ~InProcessInvoker()
     {
       if( m_client_data.unique() )
+      {
         b.disconect(m_client_data); 
+        delete notification_object;
+      }
     }
  
     bool is_useable()
@@ -51,7 +54,12 @@ namespace rubble { namespace rpc {
         "THE FLAG THAT REPRESENTS ACTIVE "
         "RPC SHOULD NOT BE SET WHEN RESETING AN OBJECT FOR RPC");
     }
-    
+   
+    void invoke()
+    {
+      b.invoke(*this);
+    }
+ 
     void operator() ()
     {
       service->dispatch(*client_cookie,*m_client_data);
