@@ -114,6 +114,7 @@ namespace rubble { namespace common {
     inline const typename identifier_type::name_type & name()             const;
     inline const typename identifier_type::ordinal_type ordinal()         const;
     inline const _entry_type & entry()                                    const;
+    inline _entry_type & entry();
     inline const identifier_type & Id()                                   const; 
     
     inline void set_identifier(const identifier_type & id_in);

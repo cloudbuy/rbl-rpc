@@ -4,6 +4,7 @@
 #include <rpc/invoker/InProcessInvoker.h>
 #include <rpc/backend/ClientServiceCookies.h>
 #include <rpc/proto/TestService-server.rblrpc.h>
+#include <rpc/proto/TestService-client.rblrpc.h>
 
 using namespace rubble::rpc;
 using namespace rubble::rpc::test_proto;
@@ -56,6 +57,9 @@ protected:
 
 TEST_F(FactorInProcessInvokerTest, compilation_test)
 {
+  EXPECT_EQ(scf->service_count(), 2);
+  test_service_one_client::shptr tso
+    =  scf->subscribe_service<test_service_one_client>("test_service_one");
 }
 
 #ifdef ISOLATED_GTEST_COMPILE

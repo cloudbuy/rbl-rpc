@@ -199,7 +199,15 @@ namespace rubble  { namespace common {
   {
     return entry_;
   }
-
+  
+  template<typename identifier_type, typename _entry_type>
+  inline _entry_type &
+  OidContainerEntryType<identifier_type, _entry_type>::entry() 
+  {
+    return const_cast<_entry_type &>(
+      ( static_cast<const OidContainerEntryType<identifier_type, _entry_type> *>(this))
+        ->entry());
+  }
   template<typename identifier_type, typename _entry_type>
   inline const identifier_type & 
   OidContainerEntryType<identifier_type, _entry_type>::Id() const

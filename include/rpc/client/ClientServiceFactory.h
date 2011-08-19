@@ -62,7 +62,66 @@ public:
     basic_protocol::ListServicesResponse lres;
     
     bpc->list_services(lreq,lres);
+    
+    for(int i=0; i< lres.services_size(); ++i)
+    {
+      const basic_protocol::ServiceEntry e = 
+        lres.services(i);
+      m_services.SetEntry(
+        common::Oid(e.service_name(), e.service_ordinal()),
+        ClientServiceBase::shptr());
+    }
   }
+
+  template<typename RT>
+  typename RT::shptr subscribe_service(
+    const std::string & service_name, 
+    google::protobuf::Message * subscription_request_data = NULL,
+    google::protobuf::Message * subscription_response_data = NULL)
+  {
+    common::OidContainer<common::Oid, ClientServiceBase::shptr>::entry_type* e 
+        = m_services.EntryWithName(service_name);
+    
+    if((*e).entry().get() != NULL)
+      throw BackEndException();
+   
+    if((*e).ordinal() >= service_count())
+      throw BackEndException();      
+
+    basic_protocol::SubscribeServiceRequest req;
+    basic_protocol::SubscribeServiceResponse res;
+    
+    req.set_service_ordinal( (*e).ordinal());
+  
+    if(subscription_request_data != NULL) 
+    {
+      subscription_request_data->SerializeToString(
+        req.mutable_subscribe_request_string());
+    }
+    bpc->rpc_subscribe_service(req,res);
+    
+    if(res.error() != basic_protocol::NO_SUBSCRIBE_SERVICE_ERROR)
+      throw BackEndException();
+
+    if(res.has_subscribe_result_string())
+    {
+      if(subscription_response_data == NULL)
+        throw BackEndException();
+
+      subscription_response_data->ParseFromString(
+        res.subscribe_result_string()
+      );
+    }
+    (*e).entry().reset(new RT(m_invoker));
+
+    return static_cast<typename RT::shptr>( (*e).entry());
+  }
+
+  boost::uint16_t service_count()
+  {
+    return m_services.size();
+  }
+
 private:
   InvokerBase &   m_invoker;
   std::string     m_name;
