@@ -178,9 +178,10 @@ void create_client_service( Printer & gen_out, const ServiceDescriptor * sd)
 {
   int method_count = sd->method_count();
   gen_out.Indent();
-  gen_out.Print("class $CN$_client: protected rubble::rpc::ClientServiceBase \n{\n", "CN", sd->name());
+  gen_out.Print("class $CN$_client: public rubble::rpc::ClientServiceBase \n{\n", "CN", sd->name());
   gen_out.Print("public:\n");
   gen_out.Indent();
+    gen_out.Print("typedef boost::scoped_ptr<$CN$_client> scptr;\n\n", "CN", sd->name());
     // constructor
     gen_out.Print("$CN$_client(InvokerBase & invoker)\n  : ClientServiceBase(invoker, $MC$)\n",
       "CN",sd->name(),
@@ -206,6 +207,7 @@ void create_client_service( Printer & gen_out, const ServiceDescriptor * sd)
         gen_out.Print(map,"void $MN$(const $IP$ & req, $OP$ & res)\n{\n");
         gen_out.Indent();
           gen_out.Print("static const boost::uint16_t method_id = $I$;\n","I", boost::lexical_cast<std::string>(i));
+          gen_out.Print("m_invoker.reset();\n");
           gen_out.Print("m_invoker.request().set_request_ordinal( * m_service_method_map[method_id]);\n");
           gen_out.Print("req.SerializeToString(m_invoker.request().mutable_request_string());\n\n");
           gen_out.Print("m_invoker.invoke();\n");
@@ -213,6 +215,7 @@ void create_client_service( Printer & gen_out, const ServiceDescriptor * sd)
 //          gen_out.Print("if( !res.ParseFromString( m_client_request.response_string()))\n");
 //          gen_out.Indent();
 //            gen_out.Print("throw \"response string not parsing correctly\";\n\n");
+          gen_out.Print("res.ParseFromString(m_invoker.response().response_string());\n");
           gen_out.Outdent();
         gen_out.Outdent();
         gen_out.Print("}\n");

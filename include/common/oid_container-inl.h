@@ -327,6 +327,17 @@ namespace rubble  { namespace common {
       return NULL; 
     }
   }
+  
+  template<typename _identifier_type, typename _entry_type>
+  inline typename 
+  OidContainer<_identifier_type, _entry_type>::entry_type * 
+  OidContainer<_identifier_type, _entry_type>::
+  EntryAtordinal(boost::uint32_t ordinal)
+  {
+    return const_cast<OidContainer<_identifier_type, _entry_type>::entry_type *>(
+      static_cast<const OidContainer<_identifier_type, _entry_type> *>
+        (this)->EntryAtordinal(ordinal));
+  }
 
   template<typename _identifier_type, typename _entry_type>
   inline const typename  
@@ -344,6 +355,17 @@ namespace rubble  { namespace common {
     {
       return &(*it);
     }
+  }
+  
+  template<typename _identifier_type, typename _entry_type>
+  inline  typename  
+  OidContainer<_identifier_type, _entry_type>::entry_type *
+  OidContainer<_identifier_type, _entry_type>::
+  EntryWithName(const typename identifier_type::name_type & name_in)
+  {
+    return const_cast< OidContainer<_identifier_type, _entry_type>::entry_type*>(
+      static_cast<const OidContainer<_identifier_type, _entry_type> *>
+        (this)->EntryWithName(name_in));
   }
 
 

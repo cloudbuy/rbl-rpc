@@ -5,6 +5,7 @@
 #include <rpc/backend/ClientServiceCookies.h>
 #include <rpc/backend/ServiceBase.h>
 #include <rpc/proto/BasicProtocol-server.rblrpc.h>
+#include <rpc/client/ClientBase.h>
 
 #include <boost/asio.hpp>
 #include <boost/thread.hpp>
@@ -12,9 +13,14 @@
 #include <set>
 #include <iostream>
 
+#define BASIC_PROTOCOL_HELLO_ORDINAL                0
+#define BASIC_PROTOCOL_LIST_SERVICES_ORDINAL        1
+#define BASIC_PROTOCOL_RPC_SUBSCRIBE_ORDINAL        2
+#define BASIC_PROTOCOL_RPC_UBSUBSCRIBE_ORDINAL      3
+#define BASIC_PROTOCOL_LIST_METHODS_ORDINAL         4
 
 namespace rubble { namespace rpc {
-  
+     
   class BackEnd
   {
   public:
@@ -178,7 +184,7 @@ namespace rubble { namespace rpc {
           rpc_backend_error);
       RBL_RPC_ERROR_RETURN_RPC(i.client_data());
     }
-  
+ 
     i.service = service->get();      
 
     // check if method ordinal is defined in the service
@@ -189,14 +195,14 @@ namespace rubble { namespace rpc {
           rpc_backend_error);
       
       RBL_RPC_ERROR_RETURN_RPC(i.client_data());
+      
     }
-  
+
     { // lock_scope_lock
       boost::lock_guard<boost::recursive_mutex> lock(m_mutex);
       m_client_service_cookies.create_or_retrieve_cookie(
         request.service_ordinal(), i.client_data().get(),&i.client_cookie);
     }
-    
     // Check if subscribed, service 0 does not require an explicit subscribe 
     // event Subscription will be done implicetly
     if(request.service_ordinal() != 0)       
@@ -229,6 +235,9 @@ namespace rubble { namespace rpc {
 //    std::cout << (*service)->name() << "::" << request.request_ordinal() << std::endl; 
     m_io_service.post(i);
     i.after_post();
+    basic_protocol::ListServicesResponse res;
+    res.ParseFromString(i.client_data()->response().response_string());
+
   }
 
 } }

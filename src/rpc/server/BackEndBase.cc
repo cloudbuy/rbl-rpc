@@ -237,9 +237,9 @@ namespace rubble { namespace rpc {
         rpc_backend_error);
       hres.set_error_type(basic_protocol::SOURCE_EXPECTATION_MISMATCH);
       cd.request_disconect();
+
       return;
     }
-
     cd.name(hr.node_name());
     hres.set_error_type(basic_protocol::NO_HELLO_ERRORS);
     cd.establish_client();
@@ -251,6 +251,7 @@ namespace rubble { namespace rpc {
     ClientCookie & cc, ClientData & cd,
     basic_protocol::ListServicesRequest & req, 
     basic_protocol::ListServicesResponse & res)
+  
   {
     const BackEnd::t_services & services = m_backend->services();
 

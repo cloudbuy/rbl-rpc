@@ -18,7 +18,7 @@ namespace rubble { namespace rpc {
     {
       return m_client_data->request();
     }
-    inline basic_protocol::ClientResponse &  repsonse()
+    inline basic_protocol::ClientResponse &  response()
     {
       return m_client_data->response();
     }
