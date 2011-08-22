@@ -10,6 +10,17 @@ message Response
   optional string res = 1;
 }
 
+message subscribe_data_in
+{
+  optional string str = 1;
+};
+
+message subscribe_data_out
+{
+  optional string str = 1;
+
+};
+
 service test_service_one
 {
   rpc dummy_rpc (Request) returns (Response);

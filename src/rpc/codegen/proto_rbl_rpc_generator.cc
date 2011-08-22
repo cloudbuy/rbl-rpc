@@ -182,6 +182,8 @@ void create_client_service( Printer & gen_out, const ServiceDescriptor * sd)
   gen_out.Print("public:\n");
   gen_out.Indent();
     gen_out.Print("typedef boost::scoped_ptr<$CN$_client> scptr;\n\n", "CN", sd->name());
+    gen_out.Print("typedef boost::shared_ptr<$CN$_client> shptr;\n\n", "CN", sd->name());
+
     // constructor
     gen_out.Print("$CN$_client(InvokerBase & invoker)\n  : ClientServiceBase(invoker, $MC$)\n",
       "CN",sd->name(),
@@ -208,6 +210,7 @@ void create_client_service( Printer & gen_out, const ServiceDescriptor * sd)
         gen_out.Indent();
           gen_out.Print("static const boost::uint16_t method_id = $I$;\n","I", boost::lexical_cast<std::string>(i));
           gen_out.Print("m_invoker.reset();\n");
+          gen_out.Print("m_invoker.request().set_service_ordinal(service_ordinal());");
           gen_out.Print("m_invoker.request().set_request_ordinal( * m_service_method_map[method_id]);\n");
           gen_out.Print("req.SerializeToString(m_invoker.request().mutable_request_string());\n\n");
           gen_out.Print("m_invoker.invoke();\n");

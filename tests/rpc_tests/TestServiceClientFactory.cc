@@ -17,12 +17,29 @@ public:
   void subscribe(ClientCookie & client_cookie, ClientData & cd,
     std::string * in, std::string * out) 
   {
-    BOOST_ASSERT(in->compare("hahaha")==0);
-    out->assign("QQ");
+    test_proto::subscribe_data_in in_;
+    test_proto::subscribe_data_out out_;
+
+    in_.ParseFromString(*in);
+  
+    if( in_.str().compare("okie") == 0)
+    {
+      out_.set_str("dokie");
+    }
+    else
+      out_.set_str("pokie");
+    
+    out_.SerializeToString(out);
   }
   void teardown(boost::system::error_code & ec) { ec.clear(); }
   void unsubscribe(ClientCookie & client_cookie, ClientData & cd) {}
-  void dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & ){}
+  void dummy_rpc(ClientCookie &,ClientData &,Request & req,Response & res)
+  {
+    if( req.req().compare("okie") == 0)
+      res.set_res("dokie");
+    else
+      res.set_res("pokie");
+  }
 private:
 };
 
@@ -58,8 +75,27 @@ protected:
 TEST_F(FactorInProcessInvokerTest, compilation_test)
 {
   EXPECT_EQ(scf->service_count(), 2);
+
+  test_proto::subscribe_data_in in;
+  test_proto::subscribe_data_out out;
+  
+  in.set_str(std::string("okie")); 
+
   test_service_one_client::shptr tso
-    =  scf->subscribe_service<test_service_one_client>("test_service_one");
+    =  scf->subscribe_service<test_service_one_client>("test_service_one", &in, &out);
+  ASSERT_TRUE(tso.get() != NULL);
+
+  EXPECT_EQ(out.str(), "dokie");
+
+  EXPECT_TRUE( scf->has_service_with_name("basic_protocol"));
+  
+  test_proto::Request   req;
+  test_proto::Response  res;
+  
+  req.set_req("okie");
+  tso->dummy_rpc(req,res);
+
+  EXPECT_EQ(res.res(), "dokie");
 }
 
 #ifdef ISOLATED_GTEST_COMPILE

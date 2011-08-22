@@ -82,10 +82,13 @@ public:
     common::OidContainer<common::Oid, ClientServiceBase::shptr>::entry_type* e 
         = m_services.EntryWithName(service_name);
     
-    if((*e).entry().get() != NULL)
+    if( e == NULL) // the named service does not exist
+      throw BackEndException();
+
+    if((*e).entry().get() != NULL) // subscription should only occur once.
       throw BackEndException();
    
-    if((*e).ordinal() >= service_count())
+    if((*e).ordinal() >= service_count()) // this should never occur
       throw BackEndException();      
 
     basic_protocol::SubscribeServiceRequest req;
@@ -103,7 +106,7 @@ public:
     if(res.error() != basic_protocol::NO_SUBSCRIBE_SERVICE_ERROR)
       throw BackEndException();
 
-    if(res.has_subscribe_result_string())
+    if(! res.subscribe_result_string().empty())
     {
       if(subscription_response_data == NULL)
         throw BackEndException();
@@ -113,15 +116,53 @@ public:
       );
     }
     (*e).entry().reset(new RT(m_invoker));
+  
+    // populate the method map
+    basic_protocol::ListMethodsRequest  lm_req;
+    basic_protocol::ListMethodsResponse lm_res;
+    lm_req.set_service_ordinal((*e).ordinal());
+    bpc->list_methods(lm_req, lm_res);
+    
+    if( lm_res.error() != basic_protocol::NO_LIST_METHOD_ERROR )
+      throw BackEndException();
 
-    return static_cast<typename RT::shptr>( (*e).entry());
+    for(int i=0; i < lm_res.methods_size(); ++i)
+    {
+      const basic_protocol::MethodEntry & me = lm_res.methods(i);
+      
+      boost::uint16_t * ordinal = 
+        (*e).entry()->m_service_method_map[me.service_name()];
+      
+      *ordinal = me.service_ordinal();
+    }
+
+    // make sure no method/ordinals are uninitialized in the method map
+    for(int i = 0; i < (*e).entry()->m_service_method_map.size(); ++i)
+    {
+      boost::uint16_t * ordinal = 
+        (*e).entry()->m_service_method_map[i];
+      
+      if(*ordinal == -1)
+        throw BackEndException();
+    }
+    (*e).entry()->set_service_ordinal(e->ordinal());
+    return boost::static_pointer_cast<RT>( (*e).entry());
   }
 
   boost::uint16_t service_count()
   {
     return m_services.size();
   }
-
+  
+  bool has_service_with_name(const std::string & str)
+  {
+    ClientServiceBase::shptr * tmp = m_services[str];
+    
+    if( tmp == NULL)
+      return false;
+    else
+      return true;   
+  }
 private:
   InvokerBase &   m_invoker;
   std::string     m_name;
