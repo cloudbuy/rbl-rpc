@@ -19,8 +19,13 @@ namespace rpc {
 
     ClientServiceBase(InvokerBase & invoker, boost::uint16_t method_count)
       : m_invoker(invoker),
-        m_method_count(method_count)
+        m_method_count(method_count),
+        m_is_subscribed(false)
     {
+    }
+    bool is_subscribed()
+    {
+      return m_is_subscribed;
     }
 
   protected:
@@ -55,11 +60,18 @@ namespace rpc {
     {
       m_service_ordinal = ordinal; 
     }
-    
+
+    void set_is_subscribed(bool in)
+    {
+      m_is_subscribed = in;
+    }    
+
+
     boost::uint16_t         m_service_ordinal;
     t_service_method_map    m_service_method_map;
     boost::int16_t          m_method_count;
     InvokerBase &           m_invoker;
+    bool                    m_is_subscribed;
   };
 
 } }

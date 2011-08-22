@@ -382,6 +382,8 @@ namespace rubble { namespace rpc {
 
     cookie->destroy_cookie();
     cookies.delete_cookie(req.service_ordinal(),&cd);
+    
+    res.set_error(basic_protocol::NO_SUBSCRIBE_SERVICE_ERROR);
   }
   //-------------------------------------------------------------------------//
   

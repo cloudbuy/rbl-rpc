@@ -161,7 +161,32 @@ public:
         throw BackEndException();
     }
     (*e).entry()->set_service_ordinal(e->ordinal());
+    (*e).entry()->set_is_subscribed(true);
     return boost::static_pointer_cast<RT>( (*e).entry());
+  }
+
+  void unsubscribe_service(const std::string & service_name)
+  {
+    common::OidContainer<common::Oid, ClientServiceBase::shptr>::entry_type* e 
+      = m_services.EntryWithName(service_name);
+
+    if ( e == NULL)
+      throw BackEndException();
+    
+    if( (*e).entry().get() == NULL)
+      throw BackEndException();
+    
+    basic_protocol::UnsubscribeServiceRequest req;
+    basic_protocol::UnsubscribeServiceResponse res;
+
+    req.set_service_ordinal( (*e).ordinal());
+   
+    bpc->rpc_unsubscribe_service(req,res);
+  
+    if(res.error() != basic_protocol::NO_SUBSCRIBE_SERVICE_ERROR)
+      throw BackEndException();
+
+    (*e).entry()->set_is_subscribed(false); 
   }
 
   boost::uint16_t service_count()

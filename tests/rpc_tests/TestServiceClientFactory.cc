@@ -108,6 +108,10 @@ TEST_F(FactorInProcessInvokerTest, compilation_test)
 
   EXPECT_EQ(res.res(), "dokie");
 
+  scf->unsubscribe_service("test_service_one");
+  
+  ASSERT_FALSE(tso->is_subscribed());
+  ASSERT_FALSE(tso2->is_subscribed());
 }
 
 #ifdef ISOLATED_GTEST_COMPILE
