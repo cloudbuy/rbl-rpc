@@ -74,6 +74,21 @@ public:
   }
 
   template<typename RT>
+  typename RT::shptr get_service( const std::string & service_name)
+  {
+    common::OidContainer<common::Oid, ClientServiceBase::shptr>::entry_type* e 
+      = m_services.EntryWithName(service_name);
+
+    if ( e == NULL)
+      throw BackEndException();
+    
+    if( (*e).entry().get() == NULL)
+      throw BackEndException();
+    
+    return boost::static_pointer_cast<RT>( (*e).entry());
+  }
+
+  template<typename RT>
   typename RT::shptr subscribe_service(
     const std::string & service_name, 
     google::protobuf::Message * subscription_request_data = NULL,

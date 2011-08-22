@@ -96,6 +96,18 @@ TEST_F(FactorInProcessInvokerTest, compilation_test)
   tso->dummy_rpc(req,res);
 
   EXPECT_EQ(res.res(), "dokie");
+
+  test_service_one_client::shptr tso2
+    =  scf->get_service<test_service_one_client>("test_service_one");
+
+  req.Clear();
+  res.Clear();
+  
+  req.set_req("okie");
+  tso2->dummy_rpc(req,res);
+
+  EXPECT_EQ(res.res(), "dokie");
+
 }
 
 #ifdef ISOLATED_GTEST_COMPILE
