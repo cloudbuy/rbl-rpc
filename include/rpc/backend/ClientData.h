@@ -6,16 +6,21 @@
 #include <boost/scoped_array.hpp>
 
 namespace rubble { namespace rpc {
-  struct buffer
+  struct Buffer
   {
-    buffer()
+    Buffer()
       : buf_size(RBL_RPC_CONF_INITIAL_BUFFER_SIZE),
         buf(new boost::uint8_t[RBL_RPC_CONF_INITIAL_BUFFER_SIZE])
     {
        
     }
-    
-    boost::uint8_t * resize_buffer(std::size_t new_size)
+   
+    std::size_t size()
+    {
+      return buf_size;
+    }
+ 
+    boost::uint8_t * resize(std::size_t new_size)
     {
       buf.reset(new boost::uint8_t[new_size]);
       buf_size=new_size;

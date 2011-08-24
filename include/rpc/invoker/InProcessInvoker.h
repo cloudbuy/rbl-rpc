@@ -3,7 +3,6 @@
 #include <rpc/invoker/InvokerBase.h>
 
 namespace rubble { namespace rpc {
-
   struct InProcessInvoker : public InvokerBase
   {
     struct notification_object_
