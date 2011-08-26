@@ -16,11 +16,11 @@ class FrontEndException
 {
 };
 
-struct TcpFrontEndData
+struct TcpConnection
 {
-  typedef boost::shared_ptr<TcpFrontEndData>  shptr;
+  typedef boost::shared_ptr<TcpConnection>  shptr;
 
-  TcpFrontEndData(BackEnd & b, SharedSocket s_in)
+  TcpConnection(BackEnd & b, SharedSocket s_in)
     : socket(s_in),
       backend(b)
   {
@@ -42,7 +42,7 @@ struct TcpFrontEndData
 
       boost::asio::async_read(  *socket.get(), 
                                     boost::asio::buffer( buffer.get(), ( msg_sz -8)),
-                                    boost::bind(&TcpFrontEndData::handle_read_body, 
+                                    boost::bind(&TcpConnection::handle_read_body, 
                                       this, 
                                       boost::asio::placeholders::bytes_transferred,
                                       boost::asio::placeholders::error));
@@ -59,7 +59,6 @@ struct TcpFrontEndData
     if(!error)
     {
       cd.request().ParseFromArray( buffer.get(), bytes_sent);
-
     }
     else
     {
@@ -90,9 +89,6 @@ public:
       throw FrontEndException();
   }
 
-  
-
-private:
   void start_accept()
   {
     SharedSocket socket(new boost::asio::ip::tcp::socket(m_io_service) );
@@ -102,17 +98,20 @@ private:
         socket,boost::asio::placeholders::error));
   }
   
-  void handle_accept(SharedSocket socket, const boost::system::error_code & error)
+
+
+private:
+    void handle_accept(SharedSocket socket, const boost::system::error_code & error)
   {
     if(!error)
     {
-      TcpFrontEndData::shptr connection(new TcpFrontEndData( m_backend, socket));
+      TcpConnection::shptr connection(new TcpConnection( m_backend, socket));
        
       m_connections.insert(connection);
 
       boost::asio::async_read(  *connection->socket.get(),
                                   boost::asio::buffer ( &connection->buffer, 8 ),
-                                  boost::bind ( &TcpFrontEndData::handle_read_header, connection,
+                                  boost::bind ( &TcpConnection::handle_read_header, connection,
                                     boost::asio::placeholders::bytes_transferred,
                                     boost::asio::placeholders::error ) );
     }
@@ -128,7 +127,7 @@ private:
   BackEnd &                                   m_backend;
   boost::asio::io_service                     m_io_service;
   boost::asio::ip::tcp::acceptor              m_acceptor;
-  std::set<TcpFrontEndData::shptr >           m_connections;
+  std::set<TcpConnection::shptr >           m_connections;
 };
 
 } }
