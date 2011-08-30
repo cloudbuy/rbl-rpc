@@ -5,12 +5,21 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
+#include <boost/thread.hpp>
 #include <set>
 
 namespace rubble {
 namespace rpc {
 
 typedef boost::shared_ptr<boost::asio::ip::tcp::socket> SharedSocket;
+
+enum FRONT_END_CONNECTION_IO_STATE
+{
+  IO_READ_HEADER_WAIT_REQUEST_START = 0,
+  IO_READ_BODY_REQUEST_ACTIVE = 1,
+  IO_REQUEST_DISPATCHED = 2, 
+  IO_REQUEST_RESPONSE_WRITE =3
+};
 
 class FrontEndException
 {
@@ -79,16 +88,32 @@ public:
     : m_io_service(),
       m_backend(b_in),
       m_acceptor( m_io_service, 
-                  boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(),port))
+                  boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(),
+                  port)),
+      m_started(false)
   {
   }
 
   void start()
   {
-    if( ! m_backend.is_useable() )   
+    if( ! m_started )
+    {
+      if( ! m_backend.is_useable() )   
+        throw FrontEndException();
+      else
+        start_accept();
+    }
+    else 
       throw FrontEndException();
   }
 
+  
+  void join()
+  { 
+    m_thread.join();
+  }
+
+private:
   void start_accept()
   {
     SharedSocket socket(new boost::asio::ip::tcp::socket(m_io_service) );
@@ -96,13 +121,13 @@ public:
     m_acceptor.async_accept( *socket.get(), 
       boost::bind(&TcpFrontEnd::handle_accept, this, 
         socket,boost::asio::placeholders::error));
+    
+//    m_thread = boost::thread( boost::bind(&boost::asio::io_service::run, &m_io_service) ); 
   }
-  
 
-
-private:
-    void handle_accept(SharedSocket socket, const boost::system::error_code & error)
+  void handle_accept(SharedSocket socket, const boost::system::error_code & error)
   {
+    std::cout << "accepted" << std::endl;
     if(!error)
     {
       TcpConnection::shptr connection(new TcpConnection( m_backend, socket));
@@ -111,13 +136,16 @@ private:
 
       boost::asio::async_read(  *connection->socket.get(),
                                   boost::asio::buffer ( &connection->buffer, 8 ),
-                                  boost::bind ( &TcpConnection::handle_read_header, connection,
+                                  boost::bind ( 
+                                    &TcpConnection::handle_read_header, connection,
                                     boost::asio::placeholders::bytes_transferred,
-                                    boost::asio::placeholders::error ) );
+                                    boost::asio::placeholders::error 
+                                  ) 
+                                );
     }
     else
     {
-      std::cout << "error in handle_accept" << std::endl;
+      std::cout << "error in handle_accept : " << error.value()<< std::endl;
     }
     start_accept();
   }
@@ -127,7 +155,9 @@ private:
   BackEnd &                                   m_backend;
   boost::asio::io_service                     m_io_service;
   boost::asio::ip::tcp::acceptor              m_acceptor;
-  std::set<TcpConnection::shptr >           m_connections;
+  std::set<TcpConnection::shptr >             m_connections;
+  boost::thread                               m_thread;
+  bool                                        m_started;
 };
 
 } }

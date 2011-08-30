@@ -7,6 +7,8 @@
 #include <rpc/proto/TestService-client.rblrpc.h>
 #include <rpc/frontend/TcpFrontEnd.h>
 #include <rpc/invoker/TcpInvoker.h>
+#include <boost/thread/thread.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 using namespace rubble::rpc;
 
@@ -17,13 +19,15 @@ TEST(temp, temp_test)
   b.start();
   TcpFrontEnd tfe(b,5555);
  
-  tfe.start_accept();
+  tfe.start();
  
   TcpInvoker inv("127.0.0.1", 5555);
   EXPECT_TRUE( inv.is_useable());
   
   TcpInvoker inv2("127.0.0.1", 7777);
   EXPECT_FALSE( inv2.is_useable());
+
+//  boost::this_thread::sleep(boost::posix_time::seconds(1));
 }
 
 #ifdef ISOLATED_GTEST_COMPILE

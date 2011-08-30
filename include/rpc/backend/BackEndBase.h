@@ -21,7 +21,7 @@
 
 namespace rubble { namespace rpc {
      
-  class BackEnd
+  class BackEnd : boost::noncopyable
   {
   public:
     typedef common::OidContainer<common::Oid, ServiceBase::shp> t_services;
@@ -78,7 +78,7 @@ namespace rubble { namespace rpc {
  
     boost::asio::io_service                             m_io_service;
 
-    boost::asio::io_service::work                       m_work;
+    boost::scoped_ptr<boost::asio::io_service::work>    m_work;
     boost::recursive_mutex                              m_mutex;
     
     boost::timed_mutex                                  m_rpc_activity_mutex;
@@ -163,6 +163,8 @@ namespace rubble { namespace rpc {
   {                                                                             \
     boost::lock_guard<boost::timed_mutex> act_lock(m_rpc_activity_mutex);       \
     m_rpc_count--;                                                              \
+    if(! m_accepting_requests )                                                 \
+      ;                                                                         \
   }                                                                             \
   client_data->end_rpc();                                                       \
   return;

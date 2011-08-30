@@ -9,7 +9,7 @@ namespace rubble { namespace rpc {
     : m_source_type(source_type),
       m_backend_type(backend_type),
       m_io_service(),
-      m_work(m_io_service),
+      m_work(new boost::asio::io_service::work(m_io_service)),
       m_services(),
       m_is_sealed(false),
       m_service_count(0),
@@ -125,9 +125,9 @@ namespace rubble { namespace rpc {
       m_accepting_requests = false;
     }
 
-    m_io_service.stop();
+    m_work.reset();
     m_thread_group.join_all();
- 
+
     // TODO disconect client block.
  
     for(int i=0;i<m_services.occupied_size();++i)
