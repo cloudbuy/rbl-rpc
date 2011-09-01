@@ -29,8 +29,8 @@ namespace rubble { namespace rpc {
       return m_client_data;
     }
   
-  protected:
-    // this shared ptr below is used to determine when the last Invoker is 
+  public:    
+// this shared ptr below is used to determine when the last Invoker is 
     // destroyed. Any class deriving from this one should test if the pointer
     // ".unique()" and then destroy its members.
     ClientData::shptr m_client_data;

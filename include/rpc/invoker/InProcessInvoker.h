@@ -67,9 +67,7 @@ namespace rubble { namespace rpc {
       boost::lock_guard<boost::mutex> lock(notification_object->mutex);
       notification_object->ready=true;
       notification_object->cond.notify_one();
-
     }
-
 
     void after_post()
     {

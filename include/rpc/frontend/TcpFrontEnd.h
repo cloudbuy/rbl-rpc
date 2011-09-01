@@ -26,7 +26,7 @@ class FrontEndException
 {
 };
 
-struct TcpFrontEndConnectionInvoker : public  InvokerBase
+struct TcpFrontEndConnectionInvoker : public InvokerBase
 {
   typedef boost::shared_ptr<TcpFrontEndConnectionInvoker>  shptr;
 
@@ -53,7 +53,7 @@ struct TcpFrontEndConnectionInvoker : public  InvokerBase
 
   void invoke()       
   {
-  //  backend.invoke(*this);
+    backend.invoke(*this);
   };
 
   TcpFrontEndConnectionInvoker(BackEnd & b, SharedSocket s_in)

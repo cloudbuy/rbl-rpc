@@ -3,7 +3,7 @@
 #include <rpc/common/rpc_common.h>
 #include <rpc/proto/BasicProtocol.pb.h>
 #include <boost/thread.hpp>
-#include <boost/scoped_array.hpp>
+#include <boost/shared_array.hpp>
 
 namespace rubble { namespace rpc {
   struct Buffer
@@ -32,7 +32,7 @@ namespace rubble { namespace rpc {
     }
 
     std::size_t                             buf_size;
-    boost::scoped_array<boost::uint8_t>     buf;
+    boost::shared_array<boost::uint8_t>     buf;
   };
 
   class ClientData
