@@ -63,8 +63,8 @@ namespace rubble { namespace rpc {
         
           google::protobuf::io::CodedInputStream cis(m_buffer.get(),m_buffer.size());
           
-          cis.ReadLittleEndian32(&flag_return);
-          cis.ReadLittleEndian32(&msg_size_return);
+          cis.ReadLittleEndian32( & flag_return);
+          cis.ReadLittleEndian32( & msg_size_return);
           
           if(msg_size_return < m_buffer.size())
             m_buffer.resize(msg_size_return);

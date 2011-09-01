@@ -552,7 +552,7 @@ TEST_F(SubscribeTests, double_subscribe_test)
 class Cookie : public ClientCookieBase
 {
 public:
-  bool set_destructor_sentinel(bool * sent)
+  void set_destructor_sentinel(bool * sent)
   {
     dest_sentinel = sent;
   }

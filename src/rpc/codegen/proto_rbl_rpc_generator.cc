@@ -241,6 +241,7 @@ class RblRpcGenerator : public CppGenerator
   {
       std::string stem = path(file->name()).stem().string();
       std::string stem2 = stem;
+      std::string stem3 = stem;
 
       std::string parent_path = path(file->name()).parent_path().string();
 
@@ -255,6 +256,7 @@ class RblRpcGenerator : public CppGenerator
       
       io::ZeroCopyOutputStream * stream = generator->Open(stem.append("-server.rblrpc.h"));
       stem2.append("_SERVER_RBLRPC_H");
+      stem3.append("_CLIENT_RBLRPC_H");
       Printer gen_out(stream, '$');
       
       gen_out.Print("#ifndef RBL_RPC_GEN_$STEM$_SERVER_H\n", "STEM", stem2);
@@ -314,8 +316,8 @@ class RblRpcGenerator : public CppGenerator
       stem = path(file->name()).stem().string();
       io::ZeroCopyOutputStream * stream_client = generator->Open(stem.append("-client.rblrpc.h"));
       Printer gen_out_c(stream_client, '$');
-      gen_out_c.Print("#ifndef RBL_RPC_GEN_$STEM$_CLIENT_H\n", "STEM", stem);
-      gen_out_c.Print("#define RBL_RPC_GEN_$STEM$_CLIENT_H\n\n", "STEM", stem);
+      gen_out_c.Print("#ifndef RBL_RPC_GEN_$STEM$_CLIENT_H\n", "STEM", stem3);
+      gen_out_c.Print("#define RBL_RPC_GEN_$STEM$_CLIENT_H\n\n", "STEM", stem3);
 
       gen_out_c.Print("#include \"$incl$\" \n","incl", pbuf_name);
       gen_out_c.Print("#include \"$incl$\" \n","incl", "rpc/client/ClientBase.h");

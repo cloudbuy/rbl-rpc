@@ -164,7 +164,7 @@ namespace rubble { namespace rpc {
     boost::lock_guard<boost::timed_mutex> act_lock(m_rpc_activity_mutex);       \
     m_rpc_count--;                                                              \
     if(! m_accepting_requests )                                                 \
-      ;                                                                         \
+    {}                                                                          \
   }                                                                             \
   client_data->end_rpc();                                                       \
   return;

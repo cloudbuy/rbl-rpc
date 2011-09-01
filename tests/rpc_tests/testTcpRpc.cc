@@ -27,6 +27,19 @@ TEST(temp, temp_test)
   TcpInvoker inv2("127.0.0.1", 7777);
   EXPECT_FALSE( inv2.is_useable());
 
+  basic_protocol::HelloRequest hello;
+  basic_protocol::HelloResponse hres;
+
+  inv.reset();
+  hello.set_source_type( basic_protocol::SOURCE_RELAY);
+  hello.set_expected_target( basic_protocol::TARGET_MARSHALL); 
+  hello.set_node_name("test_client");
+
+  inv.client_data()->request().Clear(); 
+  inv.client_data()->request().set_service_ordinal(0);
+  inv.client_data()->request().set_request_ordinal(0);
+  hello.SerializeToString(inv.client_data()->request().mutable_request_string());
+  inv.invoke();
 //  boost::this_thread::sleep(boost::posix_time::seconds(1));
 }
 
