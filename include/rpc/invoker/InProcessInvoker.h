@@ -24,7 +24,7 @@ namespace rubble { namespace rpc {
 
     InProcessInvoker(BackEnd & b_in)
       : b(b_in),
-        notification_object(new notification_object_()) 
+        notification_object() 
     {
       b.connect(m_client_data);
     }
@@ -34,7 +34,6 @@ namespace rubble { namespace rpc {
       if( m_client_data.unique() )
       {
         b.disconect(m_client_data); 
-        delete notification_object;
       }
     }
  
@@ -45,7 +44,7 @@ namespace rubble { namespace rpc {
  
     void reset()
     {
-      notification_object->reset();
+      notification_object.reset();
       m_client_data->request().Clear();
       m_client_data->response().Clear();
       m_client_data->error_code().clear();
@@ -64,19 +63,19 @@ namespace rubble { namespace rpc {
       service->dispatch(*client_cookie,*m_client_data);
       b.end_rpc(m_client_data.get());  
 
-      boost::lock_guard<boost::mutex> lock(notification_object->mutex);
-      notification_object->ready=true;
-      notification_object->cond.notify_one();
+      boost::lock_guard<boost::mutex> lock(notification_object.mutex);
+      notification_object.ready=true;
+      notification_object.cond.notify_one();
     }
 
     void after_post()
     {
-      boost::unique_lock<boost::mutex> lock(notification_object->mutex);
-      if(!notification_object->ready)
-        notification_object->cond.wait(lock);
+      boost::unique_lock<boost::mutex> lock(notification_object.mutex);
+      if(!notification_object.ready)
+        notification_object.cond.wait(lock);
     }
     
-    notification_object_::ptr notification_object;
+    notification_object_ notification_object;
     BackEnd & b;
   };
 

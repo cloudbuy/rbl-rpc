@@ -13,6 +13,7 @@
 
 namespace rubble {
 namespace rpc {
+class TcpFrontEnd;
 
 typedef boost::shared_ptr<boost::asio::ip::tcp::socket> SharedSocket;
 
@@ -32,7 +33,16 @@ struct TcpFrontEndConnectionInvoker : public InvokerBase
 {
   typedef boost::shared_ptr<TcpFrontEndConnectionInvoker>  shptr;
 
-  
+   TcpFrontEndConnectionInvoker(BackEnd & b, SharedSocket s_in,TcpFrontEnd & tfe)
+    : socket(s_in),
+      backend(b),
+      io_state(IO_READ_HEADER_WAIT_REQUEST_START_INACTIVE),
+      buffer(new Buffer),
+      tcp_front_end(tfe)
+  {
+    std::cout << "constructor " << s_in.use_count() << std::endl;  
+  }
+ 
   bool is_useable()
   {
     return backend.is_useable();
@@ -62,14 +72,6 @@ struct TcpFrontEndConnectionInvoker : public InvokerBase
     backend.invoke(*this);
   };
 
-  TcpFrontEndConnectionInvoker(BackEnd & b, SharedSocket s_in)
-    : socket(s_in),
-      backend(b),
-      io_state(IO_READ_HEADER_WAIT_REQUEST_START_INACTIVE),
-      buffer(new Buffer)
-  {
-    std::cout << "constructor " << s_in.use_count() << std::endl;  
-  }
 
   void handle_read_header(  std::size_t bytes_sent, const boost::system::error_code & error)
   {
@@ -120,6 +122,8 @@ struct TcpFrontEndConnectionInvoker : public InvokerBase
 
   void handle_write_response()
   {
+    io_state = IO_REQUEST_RESPONSE_WRITE_ACTIVE;
+
     boost::uint32_t flag_return;
     boost::uint32_t msg_size_return;
 
@@ -152,6 +156,7 @@ struct TcpFrontEndConnectionInvoker : public InvokerBase
   {
     if(!error)
     {
+    io_state = IO_READ_HEADER_WAIT_REQUEST_START_INACTIVE; 
     std::cout << "handle reset : " << socket.use_count() << " this: " << this<< std::endl;
 
     boost::asio::async_read(  *socket.get(),
@@ -174,6 +179,7 @@ struct TcpFrontEndConnectionInvoker : public InvokerBase
   boost::shared_ptr<Buffer>       buffer;
   BackEnd &                       backend;
   FRONT_END_CONNECTION_IO_STATE   io_state;
+  TcpFrontEnd &                   tcp_front_end;
 };
 
 class TcpFrontEnd
@@ -229,7 +235,7 @@ private:
     if(!error)
     { 
       TcpFrontEndConnectionInvoker::shptr connection(
-        new TcpFrontEndConnectionInvoker( m_backend, socket));
+        new TcpFrontEndConnectionInvoker( m_backend, socket, *this));
        
       m_connections.insert(connection);
 
@@ -245,7 +251,7 @@ private:
     }
     else
     {
-      std::cout << "error in handle_accept : " << error.value()<< std::endl;
+      std::cout << "error in handle_accept : val(" << error.value() << ") - str(" << error.message()<< ")."<< std::endl;
     }
     start_accept();
   }
