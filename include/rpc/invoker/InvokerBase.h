@@ -1,9 +1,8 @@
 #ifndef RBL_RPC_INVOKER_BASE
 #define RBL_RPC_INVOKER_BASE
 namespace rubble { namespace rpc {
-  class InvokerBase
+  struct InvokerBase
   {
-  public:
     InvokerBase()
     : m_client_data(new ClientData()) {}
     virtual ~InvokerBase(){};
@@ -29,12 +28,11 @@ namespace rubble { namespace rpc {
       return m_client_data;
     }
   
-  public:    
-// this shared ptr below is used to determine when the last Invoker is 
+    // this shared ptr below is used to determine when the last Invoker is 
     // destroyed. Any class deriving from this one should test if the pointer
     // ".unique()" and then destroy its members.
     ClientData::shptr m_client_data;
-    ClientCookie * client_cookie;
+    ClientCookie::ptr client_cookie;
     ServiceBase::ptr service;
   };
 } }

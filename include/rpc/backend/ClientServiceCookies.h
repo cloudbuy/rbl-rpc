@@ -17,6 +17,8 @@ namespace rubble { namespace rpc {
   class ClientCookie
   {
   public:
+    typedef ClientCookie * ptr;  
+  
     ClientCookie()
       : m_cookie_base(NULL),
         m_subscribed(false) {}
