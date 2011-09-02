@@ -7,6 +7,8 @@
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
+#include <google/protobuf/io/coded_stream.h>
+#include <google/protobuf/io/zero_copy_stream_impl.h>
 #include <set>
 
 namespace rubble {
@@ -49,38 +51,44 @@ struct TcpFrontEndConnectionInvoker : public InvokerBase
 
   void operator() ()  
   {
+    service->dispatch(*client_cookie, * m_client_data);
+    backend.end_rpc(m_client_data.get());
+    handle_write_response();  
   };
 
   void invoke()       
   {
+    std::cout << "invoke: " << this << std::endl; 
     backend.invoke(*this);
   };
 
   TcpFrontEndConnectionInvoker(BackEnd & b, SharedSocket s_in)
     : socket(s_in),
       backend(b),
-      io_state(IO_READ_HEADER_WAIT_REQUEST_START_INACTIVE)
+      io_state(IO_READ_HEADER_WAIT_REQUEST_START_INACTIVE),
+      buffer(new Buffer)
   {
-    
+    std::cout << "constructor " << s_in.use_count() << std::endl;  
   }
 
   void handle_read_header(  std::size_t bytes_sent, const boost::system::error_code & error)
   {
     if(!error)
     {
+      std::cout << "read header " << socket.use_count() << " this: "  << this << std::endl;
+
       boost::uint32_t msg_sz;
-      google::protobuf::io::CodedInputStream cis(buffer.get(),8);
+      google::protobuf::io::CodedInputStream cis(buffer->get(),8);
           
       cis.ReadLittleEndian32 ( & m_client_data->flags() );
       cis.ReadLittleEndian32 ( & msg_sz );
 
-      if(msg_sz < buffer.size())
-            buffer.resize(msg_sz);
+      if(msg_sz < buffer->size())
+            buffer->resize(msg_sz);
 
       io_state = IO_READ_BODY_REQUEST_ACTIVE;
-
       boost::asio::async_read(  *socket.get(), 
-                                    boost::asio::buffer( buffer.get(), ( msg_sz -8)),
+                                    boost::asio::buffer( buffer->get(), ( msg_sz -8)),
                                     boost::bind(&TcpFrontEndConnectionInvoker::handle_read_body, 
                                       this, 
                                       boost::asio::placeholders::bytes_transferred,
@@ -95,10 +103,14 @@ struct TcpFrontEndConnectionInvoker : public InvokerBase
   void handle_read_body(   std::size_t bytes_sent,
                           const boost::system::error_code & error)
   {
+    std::cout << "read body" << socket.use_count() << " this: "  << this << std::endl;
+
     if(!error)
     {
-      m_client_data->request().ParseFromArray( buffer.get(), bytes_sent);
+      m_client_data->request().ParseFromArray( buffer->get(), bytes_sent);
       io_state = IO_REQUEST_DISPATCHED_ACTIVE;
+
+      invoke(); 
     }
     else
     {
@@ -106,8 +118,60 @@ struct TcpFrontEndConnectionInvoker : public InvokerBase
     }
   }
 
+  void handle_write_response()
+  {
+    boost::uint32_t flag_return;
+    boost::uint32_t msg_size_return;
+
+    boost::uint32_t msg_size = 8 + response().ByteSize();
+   
+ 
+    if(msg_size > buffer->size() )
+      buffer->resize(msg_size);
+
+    google::protobuf::io::ArrayOutputStream aos(buffer->get(),buffer->size());
+    google::protobuf::io::CodedOutputStream cos(&aos);
+    
+    cos.WriteLittleEndian32(0); // FOR RPC FLAGS -- UNUSED ATM
+    cos.WriteLittleEndian32(msg_size);
+    response().SerializeToCodedStream(&cos);
+    
+    std::cout << "write response: " << socket.use_count() << " this: "  << this << std::endl;
+   
+    boost::asio::async_write( *socket.get(),
+      boost::asio::buffer(buffer->get(), msg_size),
+      boost::bind ( &TcpFrontEndConnectionInvoker::handle_reset_for_next_request,
+                    this,
+                    boost::asio::placeholders::bytes_transferred,
+                    boost::asio::placeholders::error)
+    );
+  }
+  
+  void handle_reset_for_next_request( std::size_t bytes_sent,
+                                      const boost::system::error_code & error)
+  {
+    if(!error)
+    {
+    std::cout << "handle reset : " << socket.use_count() << " this: " << this<< std::endl;
+
+    boost::asio::async_read(  *socket.get(),
+                                  boost::asio::buffer ( buffer->get(), 8 ),
+                                  boost::bind ( 
+                                    &TcpFrontEndConnectionInvoker::handle_read_header, 
+                                    this,
+                                    boost::asio::placeholders::bytes_transferred,
+                                    boost::asio::placeholders::error 
+                                  ) 
+                                );
+
+    }
+    else 
+    {
+    }
+  }
+
   SharedSocket                    socket;
-  Buffer                          buffer;
+  boost::shared_ptr<Buffer>       buffer;
   BackEnd &                       backend;
   FRONT_END_CONNECTION_IO_STATE   io_state;
 };
@@ -132,7 +196,12 @@ public:
       if( ! m_backend.is_useable() )   
         throw FrontEndException();
       else
+      {
         start_accept();
+        m_thread = boost::thread( boost::bind(&boost::asio::io_service::run, &m_io_service) ); 
+        std::cout << m_thread.get_id() << std::endl;
+        m_started = true;
+      }
     }
     else 
       throw FrontEndException();
@@ -153,21 +222,19 @@ private:
       boost::bind(&TcpFrontEnd::handle_accept, this, 
         socket,boost::asio::placeholders::error));
     
-//    m_thread = boost::thread( boost::bind(&boost::asio::io_service::run, &m_io_service) ); 
   }
 
   void handle_accept(SharedSocket socket, const boost::system::error_code & error)
   {
-    std::cout << "accepted" << std::endl;
     if(!error)
-    {
+    { 
       TcpFrontEndConnectionInvoker::shptr connection(
         new TcpFrontEndConnectionInvoker( m_backend, socket));
        
       m_connections.insert(connection);
 
       boost::asio::async_read(  *connection->socket.get(),
-                                  boost::asio::buffer ( &connection->buffer, 8 ),
+                                  boost::asio::buffer ( connection->buffer->get(), 8 ),
                                   boost::bind ( 
                                     &TcpFrontEndConnectionInvoker::handle_read_header, 
                                     connection,

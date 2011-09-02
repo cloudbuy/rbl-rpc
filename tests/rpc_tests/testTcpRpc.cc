@@ -1,3 +1,4 @@
+//#define  BOOST_ASIO_ENABLE_HANDLER_TRACKING
 #include <gtest/gtest.h>
 #include <rpc/client/ClientServiceFactory.h>
 #include <rpc/backend/BackEndBase.h>
@@ -39,8 +40,12 @@ TEST(temp, temp_test)
   inv.client_data()->request().set_service_ordinal(0);
   inv.client_data()->request().set_request_ordinal(0);
   hello.SerializeToString(inv.client_data()->request().mutable_request_string());
+    //std::cin.get();
+
   inv.invoke();
 //  boost::this_thread::sleep(boost::posix_time::seconds(1));
+  std::cin.get(); 
+  std::cin.get();
 }
 
 #ifdef ISOLATED_GTEST_COMPILE

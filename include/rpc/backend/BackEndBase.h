@@ -13,6 +13,8 @@
 #include <set>
 #include <iostream>
 
+#include <functional>
+
 #define BASIC_PROTOCOL_HELLO_ORDINAL                0
 #define BASIC_PROTOCOL_LIST_SERVICES_ORDINAL        1
 #define BASIC_PROTOCOL_RPC_SUBSCRIBE_ORDINAL        2
@@ -86,8 +88,6 @@ namespace rubble { namespace rpc {
     bool                                                m_accepting_requests;
     
   };
-
-  
 
   class BasicProtocolImpl
   {
@@ -172,6 +172,7 @@ namespace rubble { namespace rpc {
   template< typename Invoker>
   void BackEnd::invoke(Invoker & i)
   {
+    std::cout << "be: "  << & i << std::endl;
     RBL_RPC_START_RPC(i.client_data());      
   
     basic_protocol::ClientRequest & request = i.client_data()->request();
@@ -235,11 +236,8 @@ namespace rubble { namespace rpc {
       }
     }
 //    std::cout << (*service)->name() << "::" << request.request_ordinal() << std::endl; 
-    m_io_service.post(i);
+    m_io_service.post(boost::bind(&Invoker::operator(),boost::ref(i)));
     i.after_post();
-    basic_protocol::ListServicesResponse res;
-    res.ParseFromString(i.client_data()->response().response_string());
-
   }
 
 } }

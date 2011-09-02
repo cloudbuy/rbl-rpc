@@ -77,8 +77,6 @@ namespace rubble { namespace rpc {
     }
     
     notification_object_::ptr notification_object;
-    ClientCookie * client_cookie;
-    ServiceBase::ptr service;
     BackEnd & b;
   };
 

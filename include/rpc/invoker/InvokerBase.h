@@ -1,7 +1,7 @@
 #ifndef RBL_RPC_INVOKER_BASE
 #define RBL_RPC_INVOKER_BASE
 namespace rubble { namespace rpc {
-  struct InvokerBase
+  struct InvokerBase : public boost::noncopyable
   {
     InvokerBase()
     : m_client_data(new ClientData()) {}

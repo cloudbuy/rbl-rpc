@@ -51,6 +51,7 @@ namespace rubble { namespace rpc {
       cos.WriteLittleEndian32(0); // FOR RPC FLAGS -- UNUSED ATM
       cos.WriteLittleEndian32(msg_size);
       request().SerializeToCodedStream(&cos);
+
       std::size_t transfered_count = 
         boost::asio::write(m_socket, 
           boost::asio::buffer(m_buffer.get(), msg_size),m_error_code);
@@ -60,7 +61,6 @@ namespace rubble { namespace rpc {
         boost::asio::read(m_socket, boost::asio::buffer(m_buffer.get(), 8),m_error_code);
         if(!m_error_code)
         {
-        
           google::protobuf::io::CodedInputStream cis(m_buffer.get(),m_buffer.size());
           
           cis.ReadLittleEndian32( & flag_return);
@@ -70,7 +70,7 @@ namespace rubble { namespace rpc {
             m_buffer.resize(msg_size_return);
           
           transfered_count = boost::asio::read(m_socket, 
-            boost::asio::buffer(m_buffer.get(), msg_size_return),m_error_code);
+            boost::asio::buffer(m_buffer.get(), msg_size_return-8),m_error_code);
         }
         else
           std::cout << "error" << std::endl;
