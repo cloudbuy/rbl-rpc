@@ -39,7 +39,7 @@ namespace rubble { namespace rpc {
     void invoke()
     {
       boost::uint32_t flag_return;
-      boost::uint32_t msg_size_return;
+      boost::uint32_t msg_size_return=0;
 
       boost::uint32_t msg_size = 8 + request().ByteSize();
       
@@ -72,6 +72,11 @@ namespace rubble { namespace rpc {
           
           transfered_count = boost::asio::read(m_socket, 
             boost::asio::buffer(m_buffer.get(), msg_size_return-8),m_error_code);
+
+          google::protobuf::io::CodedInputStream cis2(m_buffer.get(),msg_size_return-8);
+
+          
+          std::cout << "response: " << (bool) response().ParseFromCodedStream(&cis2)<< std::endl;
         }
         else
           std::cout << "error" << std::endl;

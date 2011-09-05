@@ -73,7 +73,8 @@ struct TcpFrontEndConnectionInvoker : public InvokerBase
 
   void invoke()       
   {
-    std::cout << "invoke: " << this << std::endl; 
+    std::cout << "invoke: revise error handling " << this << std::endl; 
+    response().set_error(basic_protocol::REQUEST_SUCCESS);
     backend.invoke(*this);
   };
 
@@ -160,9 +161,10 @@ struct TcpFrontEndConnectionInvoker : public InvokerBase
     
     cos.WriteLittleEndian32(0); // FOR RPC FLAGS -- UNUSED ATM
     cos.WriteLittleEndian32(msg_size);
+
     response().SerializeToCodedStream(&cos);
     
-    std::cout << "write response: " << socket.use_count() << " this: "  << this << std::endl;
+    std::cout << "write response: " << cos.ByteCount() << ":" << socket.use_count() << " this: "  << this << std::endl;
    
     boost::asio::async_write( *socket.get(),
       boost::asio::buffer(buffer->get(), msg_size),
