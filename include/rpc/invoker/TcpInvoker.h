@@ -67,16 +67,20 @@ namespace rubble { namespace rpc {
           cis.ReadLittleEndian32( & flag_return);
           cis.ReadLittleEndian32( & msg_size_return);
           
-          if(msg_size_return < m_buffer.size())
+          if(msg_size_return > m_buffer.size())
             m_buffer.resize(msg_size_return);
           
           transfered_count = boost::asio::read(m_socket, 
             boost::asio::buffer(m_buffer.get(), msg_size_return-8),m_error_code);
+          if(!m_error_code)
+          {
+            google::protobuf::io::CodedInputStream cis2(m_buffer.get(),m_buffer.size());
 
-          google::protobuf::io::CodedInputStream cis2(m_buffer.get(),msg_size_return-8);
-
-          
-          std::cout << "response: " << (bool) response().ParseFromCodedStream(&cis2)<< std::endl;
+            response().ParseFromCodedStream(&cis2);
+            
+          }
+          else
+            std::cout << "error" << std::endl;
         }
         else
           std::cout << "error" << std::endl;

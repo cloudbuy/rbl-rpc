@@ -32,7 +32,7 @@ namespace rubble { namespace rpc {
     }
 
     std::size_t                             buf_size;
-    boost::shared_array<boost::uint8_t>     buf;
+    boost::scoped_array<boost::uint8_t>     buf;
   };
 
   class ClientData

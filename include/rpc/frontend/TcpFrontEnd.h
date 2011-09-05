@@ -73,7 +73,6 @@ struct TcpFrontEndConnectionInvoker : public InvokerBase
 
   void invoke()       
   {
-    std::cout << "invoke: revise error handling " << this << std::endl; 
     response().set_error(basic_protocol::REQUEST_SUCCESS);
     backend.invoke(*this);
   };
@@ -106,8 +105,6 @@ struct TcpFrontEndConnectionInvoker : public InvokerBase
   {
     if(!error)
     {
-      std::cout << "read header " << socket.use_count() << " this: "  << this << std::endl;
-
       boost::uint32_t msg_sz;
       google::protobuf::io::CodedInputStream cis(buffer->get(),8);
           
@@ -131,7 +128,6 @@ struct TcpFrontEndConnectionInvoker : public InvokerBase
   void handle_read_body(   std::size_t bytes_sent,
                           const boost::system::error_code & error)
   {
-    std::cout << "read body" << socket.use_count() << " this: "  << this << std::endl;
 
     if(!error)
     {
@@ -164,8 +160,6 @@ struct TcpFrontEndConnectionInvoker : public InvokerBase
 
     response().SerializeToCodedStream(&cos);
     
-    std::cout << "write response: " << cos.ByteCount() << ":" << socket.use_count() << " this: "  << this << std::endl;
-   
     boost::asio::async_write( *socket.get(),
       boost::asio::buffer(buffer->get(), msg_size),
       boost::bind ( &TcpFrontEndConnectionInvoker::handle_reset_for_next_request,
@@ -181,7 +175,6 @@ struct TcpFrontEndConnectionInvoker : public InvokerBase
     if(!error)
     {
     io_state = IO_READ_HEADER_WAIT_REQUEST_START_INACTIVE; 
-    std::cout << "handle reset : " << socket.use_count() << " this: " << this<< std::endl;
 
     boost::asio::async_read(  *socket.get(),
                                   boost::asio::buffer ( buffer->get(), 8 ),
@@ -234,7 +227,6 @@ struct TcpFrontEndConnectionInvoker : public InvokerBase
       {
         start_accept();
         m_thread = boost::thread( boost::bind(&boost::asio::io_service::run, &m_io_service) ); 
-        std::cout << m_thread.get_id() << std::endl;
         m_started = true;
       }
     }

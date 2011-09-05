@@ -103,7 +103,7 @@ protected:
     ti.reset(new TcpInvoker("127.0.0.1", 5555));
       tfe->start();
     
-    scf.reset(new ServiceClientFactory( "test service", *ti,
+    scf.reset(new ServiceClientFactory( "test service", *ti.get(),
                                         basic_protocol::SOURCE_RELAY, 
                                         basic_protocol::TARGET_MARSHALL));
 
@@ -122,9 +122,9 @@ protected:
 
 TEST_F(FactorInProcessInvokerTest, compilation_test)
 {
-  EXPECT_EQ(scf->service_count(), 2);
+  EXPECT_EQ(scf->service_count(), (boost::uint16_t)2);
 
-/*
+
   test_proto::subscribe_data_in in;
   test_proto::subscribe_data_out out;
   
@@ -160,7 +160,7 @@ TEST_F(FactorInProcessInvokerTest, compilation_test)
   
   ASSERT_FALSE(tso->is_subscribed());
   ASSERT_FALSE(tso2->is_subscribed());
-*/
+
 }
 
 #ifdef ISOLATED_GTEST_COMPILE

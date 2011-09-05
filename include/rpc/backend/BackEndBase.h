@@ -172,7 +172,6 @@ namespace rubble { namespace rpc {
   template< typename Invoker>
   void BackEnd::invoke(Invoker & i)
   {
-    std::cout << "be: "  << & i << std::endl;
     RBL_RPC_START_RPC(i.client_data());      
   
     basic_protocol::ClientRequest & request = i.client_data()->request();
