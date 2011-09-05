@@ -40,7 +40,12 @@ struct TcpFrontEndConnectionInvoker : public InvokerBase
       buffer(new Buffer),
       tcp_front_end(tfe)
   {
-    std::cout << "constructor " << s_in.use_count() << std::endl;  
+    backend.connect(m_client_data);
+  }
+
+  ~TcpFrontEndConnectionInvoker()
+  {
+    backend.disconect(m_client_data); 
   }
  
   bool is_useable()
@@ -73,6 +78,29 @@ struct TcpFrontEndConnectionInvoker : public InvokerBase
   };
 
 
+  void handle_error(const boost::system::error_code & error, const char * method_name)
+  {
+    if(error.category() == boost::asio::error::get_misc_category() )
+    {
+      if(error.value() == boost::asio::error::eof)
+      {
+        std::cout << "client disconected" << std::endl;
+      }
+    }
+    else if(error.category() == boost::asio::error::get_system_category() )
+    {
+      if(error.value() ==boost::asio::error::operation_aborted )
+      {
+        std::cout << "stop called:" << std::endl;
+      }
+    }
+    else
+    {
+     std::cout << "error in " << method_name << ": " << error.category().name() 
+      << " " << error.value() << " : "<< error.message() << std::endl;
+    }
+  }
+
   void handle_read_header(  std::size_t bytes_sent, const boost::system::error_code & error)
   {
     if(!error)
@@ -96,10 +124,7 @@ struct TcpFrontEndConnectionInvoker : public InvokerBase
                                       boost::asio::placeholders::bytes_transferred,
                                       boost::asio::placeholders::error));
     }
-    else
-    {
-      std::cout << "error in handle_read_header" << std::endl;
-    }
+    else handle_error(error, "handle_read_header");
   }
 
   void handle_read_body(   std::size_t bytes_sent,
@@ -114,10 +139,7 @@ struct TcpFrontEndConnectionInvoker : public InvokerBase
 
       invoke(); 
     }
-    else
-    {
-      std::cout <<"error in handle_ready_body" << std::endl;
-    }
+    else handle_error(error,"handled_read_body");
   }
 
   void handle_write_response()
@@ -170,9 +192,7 @@ struct TcpFrontEndConnectionInvoker : public InvokerBase
                                 );
 
     }
-    else 
-    {
-    }
+    else handle_error(error,"handle_reset_for_next_request");
   }
 
   SharedSocket                    socket;
@@ -182,17 +202,24 @@ struct TcpFrontEndConnectionInvoker : public InvokerBase
   TcpFrontEnd &                   tcp_front_end;
 };
 
-class TcpFrontEnd
-{
-public:
-  TcpFrontEnd(BackEnd & b_in, short port)
-    : m_io_service(),
-      m_backend(b_in),
-      m_acceptor( m_io_service, 
-                  boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(),
-                  port)),
-      m_started(false)
+  class TcpFrontEnd
   {
+  public:
+    typedef boost::scoped_ptr<TcpFrontEnd> scptr;
+    
+    TcpFrontEnd(BackEnd & b_in, short port)
+      : m_io_service(),
+        m_backend(b_in),
+        m_acceptor( m_io_service, 
+                    boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(),
+                    port)),
+        m_started(false)
+  {
+  }
+
+  ~TcpFrontEnd()
+  {
+    stop();
   }
 
   void start()
@@ -213,7 +240,12 @@ public:
       throw FrontEndException();
   }
 
-  
+  void stop()
+  {
+    m_io_service.stop();
+    join();
+  } 
+ 
   void join()
   { 
     m_thread.join();

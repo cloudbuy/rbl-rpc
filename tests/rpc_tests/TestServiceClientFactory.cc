@@ -69,7 +69,6 @@ protected:
   ServiceBase::shp s;
   InProcessInvoker  invoker;
   ServiceClientFactory::scptr scf;
-
 };
 
 TEST_F(FactorInProcessInvokerTest, compilation_test)

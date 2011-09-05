@@ -12,7 +12,7 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 using namespace rubble::rpc;
-
+/*
 TEST(temp, temp_test)
 {
   BackEnd b(basic_protocol::SOURCE_RELAY , basic_protocol::TARGET_MARSHALL);
@@ -42,6 +42,125 @@ TEST(temp, temp_test)
   hello.SerializeToString(inv.client_data()->request().mutable_request_string());
 
   inv.invoke();
+  
+//  boost::this_thread::sleep(boost::posix_time::seconds(1));
+}
+*/
+using namespace rubble::rpc;
+using namespace rubble::rpc::test_proto;
+
+// code here should mirror the code in the TestClientServiceCookies.cc file
+class test_service_one_impl
+{
+public:
+  typedef ClientCookieBase t_client_cookie;
+  void init(boost::system::error_code & ec) { ec.clear(); }
+  void subscribe(ClientCookie & client_cookie, ClientData & cd,
+    std::string * in, std::string * out) 
+  {
+    test_proto::subscribe_data_in in_;
+    test_proto::subscribe_data_out out_;
+
+    in_.ParseFromString(*in);
+  
+    if( in_.str().compare("okie") == 0)
+    {
+      out_.set_str("dokie");
+    }
+    else
+      out_.set_str("pokie");
+    
+    out_.SerializeToString(out);
+  }
+  void teardown(boost::system::error_code & ec) { ec.clear(); }
+  void unsubscribe(ClientCookie & client_cookie, ClientData & cd) {}
+  void dummy_rpc(ClientCookie &,ClientData &,Request & req,Response & res)
+  {
+    if( req.req().compare("okie") == 0)
+      res.set_res("dokie");
+    else
+      res.set_res("pokie");
+  }
+private:
+};
+
+class FactorInProcessInvokerTest : public ::testing::Test
+{
+public:
+  FactorInProcessInvokerTest()
+    : b(basic_protocol::SOURCE_RELAY , basic_protocol::TARGET_MARSHALL),
+      s(new test_service_one<test_service_one_impl>())
+    {}
+
+protected:
+  void SetUp() 
+  {
+    b.register_and_init_service(s);
+    b.pool_size(1);
+    b.start();
+    
+    tfe.reset(new TcpFrontEnd(b,5555));
+    ti.reset(new TcpInvoker("127.0.0.1", 5555));
+      tfe->start();
+    
+    scf.reset(new ServiceClientFactory( "test service", *ti,
+                                        basic_protocol::SOURCE_RELAY, 
+                                        basic_protocol::TARGET_MARSHALL));
+
+  }
+  void TearDown()
+  {
+  } 
+
+  BackEnd b;
+  ServiceBase::shp s;
+  TcpFrontEnd::scptr tfe;
+  ServiceClientFactory::scptr scf;
+
+  TcpInvoker::scptr ti; 
+};
+
+TEST_F(FactorInProcessInvokerTest, compilation_test)
+{
+  EXPECT_EQ(scf->service_count(), 2);
+
+/*
+  test_proto::subscribe_data_in in;
+  test_proto::subscribe_data_out out;
+  
+  in.set_str(std::string("okie")); 
+
+  test_service_one_client::shptr tso
+    =  scf->subscribe_service<test_service_one_client>("test_service_one", &in, &out);
+  ASSERT_TRUE(tso.get() != NULL);
+  EXPECT_EQ(out.str(), "dokie");
+
+  EXPECT_TRUE( scf->has_service_with_name("basic_protocol"));
+  
+  test_proto::Request   req;
+  test_proto::Response  res;
+  
+  req.set_req("okie");
+  tso->dummy_rpc(req,res);
+
+  EXPECT_EQ(res.res(), "dokie");
+
+  test_service_one_client::shptr tso2
+    =  scf->get_service<test_service_one_client>("test_service_one");
+
+  req.Clear();
+  res.Clear();
+  
+  req.set_req("okie");
+  tso2->dummy_rpc(req,res);
+
+  EXPECT_EQ(res.res(), "dokie");
+
+  scf->unsubscribe_service("test_service_one");
+  
+  ASSERT_FALSE(tso->is_subscribed());
+  ASSERT_FALSE(tso2->is_subscribed());
+*/
 }
 
 #ifdef ISOLATED_GTEST_COMPILE

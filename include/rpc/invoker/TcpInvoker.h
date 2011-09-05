@@ -12,6 +12,7 @@ namespace rubble { namespace rpc {
 
   struct TcpInvoker : public InvokerBase
   {
+    typedef boost::scoped_ptr<TcpInvoker> scptr;
     TcpInvoker(const std::string & str, short port)
       : m_io_service(),
         m_socket(m_io_service),
