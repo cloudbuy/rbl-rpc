@@ -5,6 +5,8 @@
 namespace rubble { namespace rpc {
   struct InProcessInvoker : InvokerBase
   {
+    typedef boost::shared_ptr<InProcessInvoker> shptr;
+
     struct notification_object_
     { 
       typedef notification_object_ * ptr; 
@@ -23,17 +25,36 @@ namespace rubble { namespace rpc {
     };
 
     InProcessInvoker(BackEnd & b_in)
-      : m_backend(b_in),
-        notification_object() 
+      : InvokerBase(),
+        m_backend(b_in),
+        notification_object(),
+        m_connected(false)
     {
-      m_backend.connect(m_client_data);
+      m_backend.register_invoker_manager(*this);
     }
     
     ~InProcessInvoker()
     {
       if( m_client_data.unique() )
       {
+        
+        disconect_from_backend();
+      }
+    }
+  
+    void connect_to_backend()
+    {
+      BOOST_ASSERT(m_connected == false);
+      m_backend.connect(m_client_data);
+      m_connected = true;
+    }
+  
+    void disconect_from_backend()
+    {
+      if(m_connected)
+      {
         m_backend.disconect(m_client_data); 
+        m_connected = false;
       }
     }
 
@@ -77,6 +98,7 @@ namespace rubble { namespace rpc {
     
     notification_object_  notification_object;
     BackEnd &             m_backend;
+    bool                  m_connected;
   };
 
 } }

@@ -22,7 +22,7 @@ set(Boost_ADDITIONAL_VERSIONS "1.47.0")
 
 set(BOOST_ROOT ${CMAKE_SOURCE_DIR}/dependencies/boost)
 
-find_package(Boost  REQUIRED COMPONENTS system filesystem thread)
+find_package(Boost  REQUIRED COMPONENTS system filesystem thread signals)
 if(Boost_FOUND)
   include_directories(${Boost_INCLUDE_DIRS})
   set(Boost_USE_MULTITHREADED      ON)

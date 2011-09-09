@@ -10,6 +10,7 @@
 #include <boost/asio.hpp>
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
+#include <boost/signal.hpp>
 #include <set>
 #include <iostream>
 
@@ -54,8 +55,14 @@ namespace rubble { namespace rpc {
  
     void connect(ClientData::shptr   client_data);
     void disconect(ClientData::shptr client_data);
-    // invocation functions
-    
+    size_t client_count() { return m_connected_clients.size(); }
+ 
+    template<typename Manager>
+    void register_invoker_manager(Manager & m)
+    {
+      m.connect_to_backend();    
+    }
+
     basic_protocol::SourceConnectionType source_type() const
       { return m_source_type;}
     basic_protocol::DestinationConnectionType destination_type() const
@@ -86,6 +93,8 @@ namespace rubble { namespace rpc {
     boost::uint16_t                                     m_service_count;
     bool                                                m_is_sealed;
     bool                                                m_has_shutdown;
+
+    boost::signal<void() >                              f_disc_invoker_sig;
  
     boost::asio::io_service                             m_io_service;
 

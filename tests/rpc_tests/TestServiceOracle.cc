@@ -625,7 +625,7 @@ public:
   CookieTest()
     : b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL),
       s(new test_service_one<test_service_cookie_test>()),
-      invoker(b) {}
+      invoker(new InProcessInvoker(b)) {}
 protected:
 
   virtual void SetUp() 
@@ -641,12 +641,12 @@ protected:
     hello.set_expected_target( destination); 
     hello.set_node_name("test_client");
   
-    invoker.client_data()->request().Clear(); 
-    invoker.client_data()->request().set_service_ordinal(0);
-    invoker.client_data()->request().set_request_ordinal(0);
-    hello.SerializeToString(invoker.client_data()->request().mutable_request_string());
-    b.invoke(invoker);
-    hres.ParseFromString(invoker.client_data()->response().response_string());
+    invoker->client_data()->request().Clear(); 
+    invoker->client_data()->request().set_service_ordinal(0);
+    invoker->client_data()->request().set_request_ordinal(0);
+    hello.SerializeToString(invoker->client_data()->request().mutable_request_string());
+    b.invoke(*invoker);
+    hres.ParseFromString(invoker->client_data()->response().response_string());
     
     basic_protocol::SubscribeServiceRequest req;
     basic_protocol::SubscribeServiceResponse res;
@@ -654,24 +654,24 @@ protected:
     std::string in = "hahaha";
     std::string out = "QQ";
   
-    invoker.reset();  
+    invoker->reset();  
 
     req.set_service_ordinal(1);
     req.set_subscribe_request_string(in); 
   
-    invoker.client_data()->request().Clear();
-    invoker.client_data()->request().set_service_ordinal(0);
-    invoker.client_data()->request().set_request_ordinal(2);
-    req.SerializeToString(invoker.client_data()->request().mutable_request_string());
+    invoker->client_data()->request().Clear();
+    invoker->client_data()->request().set_service_ordinal(0);
+    invoker->client_data()->request().set_request_ordinal(2);
+    req.SerializeToString(invoker->client_data()->request().mutable_request_string());
     
-    b.invoke(invoker);
+    b.invoke(*invoker);
     
-    invoker.reset();
-    invoker.client_data()->request().Clear();
-    invoker.client_data()->request().set_service_ordinal(1);
-    invoker.client_data()->request().set_request_ordinal(0);
+    invoker->reset();
+    invoker->client_data()->request().Clear();
+    invoker->client_data()->request().set_service_ordinal(1);
+    invoker->client_data()->request().set_request_ordinal(0);
     
-    b.invoke(invoker);  
+    b.invoke(*invoker);  
 
     test_service_one<test_service_cookie_test> * s_
       = static_cast<test_service_one<test_service_cookie_test> *>( s.get());
@@ -690,7 +690,7 @@ protected:
   BackEnd b;
   ServiceBase::shp s;
   ;
-  InProcessInvoker invoker;
+  boost::shared_ptr<InProcessInvoker> invoker;
   basic_protocol::HelloRequest hello;
   basic_protocol::HelloResponse hres;
   
@@ -713,14 +713,15 @@ TEST_F(CookieTest, cookie_dc_test)
 
   const ClientServiceCookies & c_csc = static_cast<const BackEnd *>(&b)->cookies();
   
-  EXPECT_FALSE( c_csc.contains_cookie(1,invoker.client_data().get()) == ClientServiceCookies::COOKIE_ABSENT);
+  EXPECT_FALSE( c_csc.contains_cookie(1,invoker->client_data().get()) == ClientServiceCookies::COOKIE_ABSENT);
   
-  b.disconect(invoker.client_data());
+  invoker->disconect_from_backend();
+  
   EXPECT_TRUE(s__->unsubscribe_sentinel);
   EXPECT_TRUE(s__->sentinel);
 
   
-  EXPECT_TRUE( c_csc.contains_cookie(1,invoker.client_data().get()) == ClientServiceCookies::COOKIE_ABSENT);
+  EXPECT_TRUE( c_csc.contains_cookie(1,invoker->client_data().get()) == ClientServiceCookies::COOKIE_ABSENT);
 }
 
 TEST_F(CookieTest, cookie_unsubscrive_test)
@@ -728,23 +729,23 @@ TEST_F(CookieTest, cookie_unsubscrive_test)
   basic_protocol::UnsubscribeServiceRequest us_req;
   basic_protocol::UnsubscribeServiceResponse us_res;
  
-  invoker.reset();
+  invoker->reset();
  
   us_req.set_service_ordinal(1);
   
-  invoker.client_data()->request().Clear();
-  invoker.client_data()->request().set_service_ordinal(0);
-  invoker.client_data()->request().set_request_ordinal(3);
-  us_req.SerializeToString(invoker.client_data()->request().mutable_request_string());
+  invoker->client_data()->request().Clear();
+  invoker->client_data()->request().set_service_ordinal(0);
+  invoker->client_data()->request().set_request_ordinal(3);
+  us_req.SerializeToString(invoker->client_data()->request().mutable_request_string());
 
   const ClientServiceCookies & c_csc = static_cast<const BackEnd *>(&b)->cookies();
   
-  EXPECT_FALSE( c_csc.contains_cookie(1,invoker.client_data().get()) == ClientServiceCookies::COOKIE_ABSENT);
+  EXPECT_FALSE( c_csc.contains_cookie(1,invoker->client_data().get()) == ClientServiceCookies::COOKIE_ABSENT);
  
 
-  b.invoke(invoker); 
+  b.invoke(*invoker); 
 
-  EXPECT_TRUE( c_csc.contains_cookie(1,invoker.client_data().get()) == ClientServiceCookies::COOKIE_ABSENT);
+  EXPECT_TRUE( c_csc.contains_cookie(1,invoker->client_data().get()) == ClientServiceCookies::COOKIE_ABSENT);
 
   // now test get a new cookie for the same service, the fact that it should
   // result with a cookie in the uninitialized state.
@@ -752,15 +753,15 @@ TEST_F(CookieTest, cookie_unsubscrive_test)
   // the can be asserted from the fact that when trying to perform a valid 
   // rpc call, the result should be an error stating that the service 
   // has not been  mounted by this client.
-  invoker.reset();
+  invoker->reset();
   
-  invoker.client_data()->request().Clear();
-  invoker.client_data()->request().set_service_ordinal(1);
-  invoker.client_data()->request().set_request_ordinal(0);
+  invoker->client_data()->request().Clear();
+  invoker->client_data()->request().set_service_ordinal(1);
+  invoker->client_data()->request().set_request_ordinal(0);
     
-  b.invoke(invoker);  
+  b.invoke(*invoker);  
   
-  EXPECT_EQ(invoker.client_data()->error_code().value(), error_codes::RBL_BACKEND_INVOKE_CLIENT_NOT_SUBSCRIBED);
+  EXPECT_EQ(invoker->client_data()->error_code().value(), error_codes::RBL_BACKEND_INVOKE_CLIENT_NOT_SUBSCRIBED);
 }
 
 class ListMethodTest : public ::testing::Test
@@ -915,4 +916,27 @@ int main(int argc,char ** argv)
     ::testing::InitGoogleTest(&argc,argv);
     return RUN_ALL_TESTS();
 }
+
+TEST(invoker_backend_register_tests, disconect_test)
+{
+  BackEnd b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL);
+  ServiceBase::shp s(new test_service_one<test_service_one_dest_no_fail>());
+  b.register_and_init_service(s);
+
+  
+  b.pool_size(1);
+  b.start();
+  
+  EXPECT_EQ(b.client_count(), 0);
+  InProcessInvoker::shptr inv(new InProcessInvoker(b));
+  EXPECT_EQ(b.client_count(),1);
+  InProcessInvoker::shptr inv2(new InProcessInvoker(b));
+  EXPECT_EQ(b.client_count(),2);
+  inv2.reset();
+  EXPECT_EQ(b.client_count(),1);
+  inv.reset();
+  EXPECT_EQ(b.client_count(),0);
+}
+
+
 #endif

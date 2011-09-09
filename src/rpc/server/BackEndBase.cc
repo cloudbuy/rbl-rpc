@@ -200,7 +200,9 @@ namespace rubble { namespace rpc {
         m_client_service_cookies.delete_cookie(i,client_data.get());
       }
     }
-    m_connected_clients.erase(client_data);
+    bool erased = (m_connected_clients.erase(client_data) == 1);
+    BOOST_ASSERT_MSG(erased, 
+      "the client was not present in the connected client set"); 
   }
   //-------------------------------------------------------------------------//
 //---------------------------------------------------------------------------//
