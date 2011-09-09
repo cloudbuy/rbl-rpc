@@ -22,6 +22,15 @@
 #define BASIC_PROTOCOL_LIST_METHODS_ORDINAL         4
 
 namespace rubble { namespace rpc {
+  enum BackEndShutDownState
+  {
+    BACKEND_SHUTDOWN_COMPLETE = 0,
+    // rpc has ended threads will be terminated on next call.
+    BACKEND_SHUTDOWN_WAITING_RPC_END,
+    // all invokers have had disconect called on them, certain clients
+    // are still connected. 
+    BACKEND_WAITING_ON_CLIENT_DISCONECTIONS
+  };
      
   class BackEnd : boost::noncopyable
   {
@@ -41,11 +50,10 @@ namespace rubble { namespace rpc {
     void end_rpc(ClientData::ptr client_data); 
     void register_and_init_service(ServiceBase::shp service);
     void block_till_termination();
-    bool shutdown();
+    BackEndShutDownState shutdown();
  
     void connect(ClientData::shptr   client_data);
     void disconect(ClientData::shptr client_data);
-
     // invocation functions
     
     basic_protocol::SourceConnectionType source_type() const
@@ -72,6 +80,7 @@ namespace rubble { namespace rpc {
     boost::system::error_code                           m_ec;
     ClientServiceCookies                                m_client_service_cookies;
     std::set<ClientData::wptr>                          m_connected_clients;    
+
  
     common::OidContainer<common::Oid, ServiceBase::shp> m_services;
     boost::uint16_t                                     m_service_count;

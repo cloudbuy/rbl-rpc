@@ -116,15 +116,19 @@ namespace rubble { namespace rpc {
   //-------------------------------------------------------------------------//
   
   // shutdown /////////////////////////////////////////////////////////////////
-  bool BackEnd::shutdown()
+  BackEndShutDownState BackEnd::shutdown()
   {
     BOOST_ASSERT_MSG(m_is_sealed, 
       "shutdown should not be run on an unsealed backend");
     {
       boost::lock_guard<boost::timed_mutex> act_lock(m_rpc_activity_mutex);
-      m_accepting_requests = false;
+      
+      if(m_accepting_requests)
+        m_accepting_requests = false;
+      if( m_rpc_count != 0)
+        return BACKEND_SHUTDOWN_WAITING_RPC_END; 
     }
-
+    
     m_work.reset();
     m_thread_group.join_all();
 
@@ -155,7 +159,7 @@ namespace rubble { namespace rpc {
       } 
     }    
 
-    return m_io_service.stopped();
+    return BACKEND_SHUTDOWN_COMPLETE;
   }
   //-------------------------------------------------------------------------//
   

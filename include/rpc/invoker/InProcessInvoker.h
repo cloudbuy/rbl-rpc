@@ -3,7 +3,7 @@
 #include <rpc/invoker/InvokerBase.h>
 
 namespace rubble { namespace rpc {
-  struct InProcessInvoker : public InvokerBase
+  struct InProcessInvoker : InvokerBase
   {
     struct notification_object_
     { 
@@ -23,23 +23,23 @@ namespace rubble { namespace rpc {
     };
 
     InProcessInvoker(BackEnd & b_in)
-      : b(b_in),
+      : m_backend(b_in),
         notification_object() 
     {
-      b.connect(m_client_data);
+      m_backend.connect(m_client_data);
     }
     
     ~InProcessInvoker()
     {
       if( m_client_data.unique() )
       {
-        b.disconect(m_client_data); 
+        m_backend.disconect(m_client_data); 
       }
     }
- 
+
     bool is_useable()
     {
-      return b.is_useable();       
+      return m_backend.is_useable();       
     }
  
     void reset()
@@ -55,13 +55,13 @@ namespace rubble { namespace rpc {
    
     void invoke()
     {
-      b.invoke(*this);
+      m_backend.invoke(*this);
     }
  
     void operator() ()
     {
       service->dispatch(*client_cookie,*m_client_data);
-      b.end_rpc(m_client_data.get());  
+      m_backend.end_rpc(m_client_data.get());  
 
       boost::lock_guard<boost::mutex> lock(notification_object.mutex);
       notification_object.ready=true;
@@ -75,8 +75,8 @@ namespace rubble { namespace rpc {
         notification_object.cond.wait(lock);
     }
     
-    notification_object_ notification_object;
-    BackEnd & b;
+    notification_object_  notification_object;
+    BackEnd &             m_backend;
   };
 
 } }

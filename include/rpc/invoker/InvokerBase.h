@@ -1,6 +1,10 @@
 #ifndef RBL_RPC_INVOKER_BASE
 #define RBL_RPC_INVOKER_BASE
+#include <boost/shared_ptr.hpp>
+
 namespace rubble { namespace rpc {
+  class BackEnd;
+
   struct InvokerBase
   {
     InvokerBase()
@@ -12,6 +16,8 @@ namespace rubble { namespace rpc {
     virtual void after_post() =0; 
     virtual void operator() () = 0;   
     virtual void invoke() = 0;
+
+    
 
     inline basic_protocol::ClientRequest &   request()
     {

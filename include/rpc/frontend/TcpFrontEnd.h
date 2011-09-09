@@ -35,22 +35,22 @@ struct TcpFrontEndConnectionInvoker : public InvokerBase
 
    TcpFrontEndConnectionInvoker(BackEnd & b, SharedSocket s_in,TcpFrontEnd & tfe)
     : socket(s_in),
-      backend(b),
+      m_backend(b),
       io_state(IO_READ_HEADER_WAIT_REQUEST_START_INACTIVE),
       buffer(new Buffer),
       tcp_front_end(tfe)
   {
-    backend.connect(m_client_data);
+    m_backend.connect(m_client_data);
   }
 
   ~TcpFrontEndConnectionInvoker()
   {
-    backend.disconect(m_client_data); 
+    m_backend.disconect(m_client_data); 
   }
- 
+
   bool is_useable()
   {
-    return backend.is_useable();
+    return m_backend.is_useable();
   }
 
   void reset()        
@@ -67,14 +67,14 @@ struct TcpFrontEndConnectionInvoker : public InvokerBase
   void operator() ()  
   {
     service->dispatch(*client_cookie, * m_client_data);
-    backend.end_rpc(m_client_data.get());
+    m_backend.end_rpc(m_client_data.get());
     handle_write_response();  
   };
 
   void invoke()       
   {
     response().set_error(basic_protocol::REQUEST_SUCCESS);
-    backend.invoke(*this);
+    m_backend.invoke(*this);
   };
 
 
@@ -192,12 +192,12 @@ struct TcpFrontEndConnectionInvoker : public InvokerBase
 
   SharedSocket                    socket;
   boost::shared_ptr<Buffer>       buffer;
-  BackEnd &                       backend;
   FRONT_END_CONNECTION_IO_STATE   io_state;
   TcpFrontEnd &                   tcp_front_end;
+  BackEnd &                       m_backend; 
 };
 
-  class TcpFrontEnd
+  class TcpFrontEnd 
   {
   public:
     typedef boost::scoped_ptr<TcpFrontEnd> scptr;
@@ -209,12 +209,23 @@ struct TcpFrontEndConnectionInvoker : public InvokerBase
                     boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(),
                     port)),
         m_started(false)
-  {
-  }
+    {
+      connect_invoker_manager();
+    }
 
   ~TcpFrontEnd()
   {
+    terminate_invoker_manager();
     stop();
+  }
+  
+  void connect_invoker_manager()
+  {
+//    m_backend.connect_invoker_manager(BackEndInvokerManager::shptr(this));
+  }
+  void terminate_invoker_manager()
+  {
+  
   }
 
   void start()
@@ -284,12 +295,12 @@ private:
 
   
 
-  BackEnd &                                       m_backend;
   boost::asio::io_service                         m_io_service;
   boost::asio::ip::tcp::acceptor                  m_acceptor;
   std::set<TcpFrontEndConnectionInvoker::shptr >  m_connections;
   boost::thread                                   m_thread;
   bool                                            m_started;
+  BackEnd &                                       m_backend;
 };
 
 } }
