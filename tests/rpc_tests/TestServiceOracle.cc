@@ -917,7 +917,7 @@ int main(int argc,char ** argv)
     return RUN_ALL_TESTS();
 }
 
-TEST(invoker_backend_register_tests, disconect_test)
+TEST(invoker_backend_register_tests, in_process_invoker_disconect_test)
 {
   BackEnd b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL);
   ServiceBase::shp s(new test_service_one<test_service_one_dest_no_fail>());
@@ -937,6 +937,101 @@ TEST(invoker_backend_register_tests, disconect_test)
   inv.reset();
   EXPECT_EQ(b.client_count(),0);
 }
+
+TEST(invoker_backend_register_tests, backend_invoker_disconect_test)
+{
+  BackEnd::shptr b( new BackEnd(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL));
+  ServiceBase::shp s(new test_service_one<test_service_one_dest_no_fail>());
+  b->register_and_init_service(s);
+
+  
+  b->pool_size(1);
+  b->start();
+  
+  EXPECT_EQ(b->client_count(), 0);
+  InProcessInvoker::shptr inv(new InProcessInvoker(*b));
+  InProcessInvoker::shptr inv2(new InProcessInvoker(*b));
+  
+  b.reset();
+  EXPECT_FALSE(inv->is_connected());
+  EXPECT_FALSE(inv->is_connected());
+}
+
+  class test_service_delayed_rpc
+  {
+  public:
+    typedef ClientCookieBase t_client_cookie;
+    void init(boost::system::error_code & ec) { ec.clear(); }
+    void teardown(boost::system::error_code & ec) {ec.clear();}
+    void subscribe(ClientCookie & client_cookie, ClientData & cd,
+      std::string *, std::string *) {}
+    void unsubscribe(ClientCookie & client_cookie, ClientData & cd) {}
+
+    void dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & )
+    {
+      notify.wait_for_notification();
+//      boost::this_thread::sleep(boost::posix_time::seconds(2));
+    }
+
+    NotificationObject notify; 
+  };
+
+struct in_thread_invoker
+{
+  void operator()(BackEnd::shptr b,InProcessInvoker::shptr inv)
+  {
+    InProcessInvoker & ipi = *inv;
+    b->invoke(ipi);
+  }
+};
+
+TEST(invoker_backend_register_tests, backend_invoker_active_rpc)
+{
+  BackEnd::shptr b( new BackEnd(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL));
+  test_service_one<test_service_delayed_rpc> * s_p 
+    = new test_service_one<test_service_delayed_rpc>();
+  ServiceBase::shp s(s_p);
+  b->register_and_init_service(s);
+  
+  b->pool_size(1);
+  b->start();
+ 
+  basic_protocol::SubscribeServiceRequest sreq;
+  basic_protocol::SubscribeServiceResponse sres;
+ 
+  EXPECT_EQ(b->client_count(), 0);
+  InProcessInvoker::shptr inv(new InProcessInvoker(*b));
+
+  inv->reset();  
+  sreq.set_service_ordinal(1);
+
+  inv->client_data()->request().Clear();
+  inv->client_data()->request().set_service_ordinal(0);
+  inv->client_data()->request().set_request_ordinal(2);
+  sreq.SerializeToString(inv->client_data()->request().mutable_request_string());
+  
+  b->invoke(*inv);
+  
+  EXPECT_FALSE(inv->client_data()->error_code()) << inv->client_data()->error_code().value();
+  
+  sres.ParseFromString(inv->client_data()->response().response_string());
+  EXPECT_EQ(sres.error(),basic_protocol::NO_SUBSCRIBE_SERVICE_ERROR);
+
+
+  inv->client_data()->request().Clear();
+  inv->client_data()->request().set_service_ordinal(1);
+  inv->client_data()->request().set_request_ordinal(0);
+
+  test_proto::Request req;
+  test_proto::Response res;  
+
+  req.SerializeToString(inv->client_data()->request().mutable_request_string());
+  boost::thread t(boost::bind<void>(in_thread_invoker(),b,inv));
+  boost::thread t1(boost::bind(&BackEnd::shutdown,b,5));
+  s_p->impl().notify.notify_one();
+  t1.join();
+}
+
 
 
 #endif

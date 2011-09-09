@@ -3,26 +3,43 @@
 #include <rpc/invoker/InvokerBase.h>
 
 namespace rubble { namespace rpc {
+  struct NotificationObject
+  { 
+    typedef NotificationObject * ptr; 
+
+    NotificationObject()
+    {
+      reset();
+    }
+    void reset()
+    {
+      ready = false;
+    }
+    
+    void notify_one()
+    {
+      boost::lock_guard<boost::mutex> lock(mutex);
+      ready=true;
+      cond.notify_one();
+    }
+    
+    void wait_for_notification()
+    {
+       boost::unique_lock<boost::mutex> lock(mutex);
+      
+      if(!ready)
+        cond.wait(lock);
+    }
+    
+    bool ready;
+    boost::mutex mutex;
+    boost::condition_variable cond;
+  };
+
   struct InProcessInvoker : InvokerBase
   {
     typedef boost::shared_ptr<InProcessInvoker> shptr;
 
-    struct notification_object_
-    { 
-      typedef notification_object_ * ptr; 
-
-      notification_object_()
-      {
-        reset();
-      }
-      void reset()
-      {
-        ready = false;
-      }
-      bool ready;
-      boost::mutex mutex;
-      boost::condition_variable cond;
-    };
 
     InProcessInvoker(BackEnd & b_in)
       : InvokerBase(),
@@ -31,6 +48,11 @@ namespace rubble { namespace rpc {
         m_connected(false)
     {
       m_backend.register_invoker_manager(*this);
+    }
+    
+    bool is_connected()
+    {
+      return m_connected;
     }
     
     ~InProcessInvoker()
@@ -84,19 +106,15 @@ namespace rubble { namespace rpc {
       service->dispatch(*client_cookie,*m_client_data);
       m_backend.end_rpc(m_client_data.get());  
 
-      boost::lock_guard<boost::mutex> lock(notification_object.mutex);
-      notification_object.ready=true;
-      notification_object.cond.notify_one();
+      notification_object.notify_one();
     }
 
     void after_post()
     {
-      boost::unique_lock<boost::mutex> lock(notification_object.mutex);
-      if(!notification_object.ready)
-        notification_object.cond.wait(lock);
+        notification_object.wait_for_notification();
     }
     
-    notification_object_  notification_object;
+    NotificationObject    notification_object;
     BackEnd &             m_backend;
     bool                  m_connected;
   };

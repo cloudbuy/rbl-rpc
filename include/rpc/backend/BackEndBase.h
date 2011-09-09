@@ -36,6 +36,7 @@ namespace rubble { namespace rpc {
   class BackEnd : boost::noncopyable
   {
   public:
+    typedef boost::shared_ptr<BackEnd> shptr;
     typedef common::OidContainer<common::Oid, ServiceBase::shp> t_services;
 
     BackEnd    (  basic_protocol::SourceConnectionType       source_type,
@@ -51,7 +52,10 @@ namespace rubble { namespace rpc {
     void end_rpc(ClientData::ptr client_data); 
     void register_and_init_service(ServiceBase::shp service);
     void block_till_termination();
-    BackEndShutDownState shutdown();
+
+    void shutdown(int step_seconds =5);
+    BackEndShutDownState shutdown_step();
+    
  
     void connect(ClientData::shptr   client_data);
     void disconect(ClientData::shptr client_data);
@@ -60,7 +64,9 @@ namespace rubble { namespace rpc {
     template<typename Manager>
     void register_invoker_manager(Manager & m)
     {
-      m.connect_to_backend();    
+      m.connect_to_backend();
+      f_disc_invoker_sig.connect(
+        boost::bind( &Manager::disconect_from_backend, &m));
     }
 
     basic_protocol::SourceConnectionType source_type() const

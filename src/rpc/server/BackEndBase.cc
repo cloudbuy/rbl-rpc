@@ -29,6 +29,8 @@ namespace rubble { namespace rpc {
   // ~BackEnd /////////////////////////////////////////////////////////////////
   BackEnd::~BackEnd()
   {
+    f_disc_invoker_sig();
+
     if(m_is_sealed && !m_io_service.stopped() )
       shutdown();
   }
@@ -115,8 +117,27 @@ namespace rubble { namespace rpc {
   }
   //-------------------------------------------------------------------------//
   
+
   // shutdown /////////////////////////////////////////////////////////////////
-  BackEndShutDownState BackEnd::shutdown()
+  void BackEnd::shutdown(int step_seconds)
+  {
+    std::cout << "backend shutdown initiated" << std::endl;
+    BackEndShutDownState  state = shutdown_step();
+    
+    while (state != BACKEND_SHUTDOWN_COMPLETE)
+    {
+      std::cout << "not complete" << std::endl;
+      boost::this_thread::sleep( 
+        boost::posix_time::seconds(step_seconds) );
+      
+      state = shutdown_step();
+    }
+    
+  }
+  //-------------------------------------------------------------------------//
+
+  // shutdown_step  ///////////////////////////////////////////////////////////
+  BackEndShutDownState BackEnd::shutdown_step()
   {
     BOOST_ASSERT_MSG(m_is_sealed, 
       "shutdown should not be run on an unsealed backend");
@@ -126,13 +147,14 @@ namespace rubble { namespace rpc {
       if(m_accepting_requests)
         m_accepting_requests = false;
       if( m_rpc_count != 0)
-        return BACKEND_SHUTDOWN_WAITING_RPC_END; 
+        return BACKEND_SHUTDOWN_WAITING_RPC_END;
     }
     
     m_work.reset();
     m_thread_group.join_all();
 
     // TODO disconect client block.
+        
  
     for(int i=0;i<m_services.occupied_size();++i)
     {
