@@ -1,15 +1,11 @@
 #ifndef     RBL_HOME_EM_OID_CONTAINER_H
 #define     RBL_HOME_EM_OID_CONTAINER_H
-#include <string>
 #include <stdexcept>
-#include <string.h>
-#include <vector>
 
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/intrusive/set.hpp>
 #include <boost/type_traits.hpp>
 #include <boost/static_assert.hpp>
-#include <boost/noncopyable.hpp>
 #include <boost/integer_traits.hpp>
 
 namespace rubble { namespace common { 

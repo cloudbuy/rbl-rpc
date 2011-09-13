@@ -23,7 +23,7 @@
 #define BASIC_PROTOCOL_LIST_METHODS_ORDINAL         4
 
 namespace rubble { namespace rpc {
-  enum BackEndShutDownState
+  enum BackEndShutdownState
   {
     BACKEND_SHUTDOWN_COMPLETE = 0,
     // rpc has ended threads will be terminated on next call.
@@ -49,25 +49,30 @@ namespace rubble { namespace rpc {
    
     void start();
     bool is_useable();
+    boost::uint32_t rpc_count();
     void end_rpc(ClientData::ptr client_data); 
     void register_and_init_service(ServiceBase::shp service);
     void block_till_termination();
 
     void shutdown(int step_seconds =5);
-    BackEndShutDownState shutdown_step();
+    BackEndShutdownState shutdown_step();
     
  
     void connect(ClientData::shptr   client_data);
     void disconect(ClientData::shptr client_data);
-    size_t client_count() { return m_connected_clients.size(); }
+
+    std::size_t manager_count();
+    std::size_t client_count();
  
     template<typename Manager>
-    void register_invoker_manager(Manager & m)
+    boost::signals::connection register_invoker_manager(Manager & m)
     {
+      boost::lock_guard<boost::timed_mutex> act_lock(m_rpc_activity_mutex); 
       m.connect_to_backend();
-      f_disc_invoker_sig.connect(
+      return f_disc_invoker_sig.connect(
         boost::bind( &Manager::disconect_from_backend, &m));
     }
+
 
     basic_protocol::SourceConnectionType source_type() const
       { return m_source_type;}
@@ -110,7 +115,8 @@ namespace rubble { namespace rpc {
     boost::timed_mutex                                  m_rpc_activity_mutex;
     boost::uint32_t                                     m_rpc_count;
     bool                                                m_accepting_requests;
-    
+    BackEndShutdownState                                m_shutdown_state;
+
   };
 
   class BasicProtocolImpl
@@ -177,6 +183,25 @@ namespace rubble { namespace rpc {
     m_rpc_count--;                                                              \
   }                                                                             \
   client_data->end_rpc();
+
+  inline boost::uint32_t BackEnd::rpc_count() 
+  { 
+    boost::lock_guard<boost::timed_mutex> act_lock(m_rpc_activity_mutex); 
+    return m_rpc_count;
+  }
+
+  inline std::size_t BackEnd::manager_count()
+  {
+    boost::lock_guard<boost::timed_mutex> act_lock(m_rpc_activity_mutex); 
+    return f_disc_invoker_sig.num_slots();
+  }
+
+  inline std::size_t BackEnd::client_count()
+  {
+    boost::lock_guard<boost::timed_mutex> act_lock(m_rpc_activity_mutex); 
+    return m_connected_clients.size();
+  }
+
 
   inline void BackEnd::end_rpc(ClientData::ptr client_data)
   {

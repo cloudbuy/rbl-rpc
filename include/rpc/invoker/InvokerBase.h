@@ -1,6 +1,7 @@
 #ifndef RBL_RPC_INVOKER_BASE
 #define RBL_RPC_INVOKER_BASE
 #include <boost/shared_ptr.hpp>
+#include <boost/signals/connection.hpp>
 
 namespace rubble { namespace rpc {
   class BackEnd;
@@ -40,6 +41,7 @@ namespace rubble { namespace rpc {
     ClientData::shptr m_client_data;
     ClientCookie::ptr client_cookie;
     ServiceBase::ptr service;
+    boost::signals::connection m_sig_connection;
   };
 } }
 #endif 

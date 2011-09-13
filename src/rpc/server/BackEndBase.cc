@@ -122,11 +122,20 @@ namespace rubble { namespace rpc {
   void BackEnd::shutdown(int step_seconds)
   {
     std::cout << "backend shutdown initiated" << std::endl;
-    BackEndShutDownState  state = shutdown_step();
+    BackEndShutdownState  state = shutdown_step();
     
     while (state != BACKEND_SHUTDOWN_COMPLETE)
     {
-      std::cout << "not complete" << std::endl;
+      std::cout << "Not Complete, Waiting On: ";
+    
+      if( state == BACKEND_SHUTDOWN_WAITING_RPC_END)
+        std::cout << rpc_count() << " rpc call(s) to end." << std::endl;
+
+      if( state == BACKEND_WAITING_ON_CLIENT_DISCONECTIONS)
+        std::cout << manager_count() << " manager(s) and " 
+                  << client_count()  << " client(s) to disconect."
+                  << std::endl;
+
       boost::this_thread::sleep( 
         boost::posix_time::seconds(step_seconds) );
       
@@ -137,25 +146,51 @@ namespace rubble { namespace rpc {
   //-------------------------------------------------------------------------//
 
   // shutdown_step  ///////////////////////////////////////////////////////////
-  BackEndShutDownState BackEnd::shutdown_step()
+  BackEndShutdownState BackEnd::shutdown_step()
   {
+
     BOOST_ASSERT_MSG(m_is_sealed, 
       "shutdown should not be run on an unsealed backend");
-    {
-      boost::lock_guard<boost::timed_mutex> act_lock(m_rpc_activity_mutex);
+   
+     boost::lock_guard<boost::timed_mutex> act_lock(m_rpc_activity_mutex);
       
-      if(m_accepting_requests)
-        m_accepting_requests = false;
-      if( m_rpc_count != 0)
-        return BACKEND_SHUTDOWN_WAITING_RPC_END;
+    if(m_accepting_requests)
+    {
+      m_accepting_requests = false;
+      m_shutdown_state = BACKEND_SHUTDOWN_WAITING_RPC_END;
     }
+     
+    if( m_shutdown_state ==  BACKEND_SHUTDOWN_WAITING_RPC_END)
+    {
+      if( m_rpc_count != 0)
+      {
+        m_shutdown_state = BACKEND_SHUTDOWN_WAITING_RPC_END;
+        return BACKEND_SHUTDOWN_WAITING_RPC_END;
+      }
+      else
+      {
+        f_disc_invoker_sig();
+        m_shutdown_state = BACKEND_WAITING_ON_CLIENT_DISCONECTIONS;
+      }
+    }
+
+    
+    // TODO disconect client block.
+    if( m_shutdown_state == BACKEND_WAITING_ON_CLIENT_DISCONECTIONS)
+    {
+      if( f_disc_invoker_sig.num_slots() == 0 &&
+          m_connected_clients.size() == 0 ) 
+      { 
+      }
+      else
+      {
+        return m_shutdown_state;
+      }
+    }    
     
     m_work.reset();
     m_thread_group.join_all();
 
-    // TODO disconect client block.
-        
- 
     for(int i=0;i<m_services.occupied_size();++i)
     {
       ServiceBase::shp * sb_shp = m_services[i];

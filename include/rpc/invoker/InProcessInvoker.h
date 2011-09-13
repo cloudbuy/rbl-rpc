@@ -23,6 +23,13 @@ namespace rubble { namespace rpc {
       cond.notify_one();
     }
     
+    void notify_all()
+    {
+      boost::lock_guard<boost::mutex> lock(mutex);
+      ready=true;
+      cond.notify_all();
+    }
+
     void wait_for_notification()
     {
        boost::unique_lock<boost::mutex> lock(mutex);
@@ -47,7 +54,7 @@ namespace rubble { namespace rpc {
         notification_object(),
         m_connected(false)
     {
-      m_backend.register_invoker_manager(*this);
+      m_sig_connection =  m_backend.register_invoker_manager(*this);
     }
     
     bool is_connected()
@@ -78,6 +85,8 @@ namespace rubble { namespace rpc {
         m_backend.disconect(m_client_data); 
         m_connected = false;
       }
+     
+      m_sig_connection.disconnect(); 
     }
 
     bool is_useable()

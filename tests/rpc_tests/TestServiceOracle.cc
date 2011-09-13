@@ -965,15 +965,20 @@ TEST(invoker_backend_register_tests, backend_invoker_disconect_test)
     void teardown(boost::system::error_code & ec) {ec.clear();}
     void subscribe(ClientCookie & client_cookie, ClientData & cd,
       std::string *, std::string *) {}
-    void unsubscribe(ClientCookie & client_cookie, ClientData & cd) {}
+    void unsubscribe(ClientCookie & client_cookie, ClientData & cd) 
+    {
+        std::cout << "unsubscribed" << std::endl;
+//      notify_unsub.wait_for_notification();
+    }
 
     void dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & )
     {
       notify.wait_for_notification();
-//      boost::this_thread::sleep(boost::posix_time::seconds(2));
+      boost::this_thread::sleep(boost::posix_time::seconds(2));
     }
 
-    NotificationObject notify; 
+    NotificationObject notify;
+    NotificationObject notify_unsub;
   };
 
 struct in_thread_invoker
@@ -998,7 +1003,7 @@ TEST(invoker_backend_register_tests, backend_invoker_active_rpc)
  
   basic_protocol::SubscribeServiceRequest sreq;
   basic_protocol::SubscribeServiceResponse sres;
- 
+
   EXPECT_EQ(b->client_count(), 0);
   InProcessInvoker::shptr inv(new InProcessInvoker(*b));
 
@@ -1011,7 +1016,9 @@ TEST(invoker_backend_register_tests, backend_invoker_active_rpc)
   sreq.SerializeToString(inv->client_data()->request().mutable_request_string());
   
   b->invoke(*inv);
-  
+ 
+  EXPECT_EQ(b->client_count(), 1);
+ 
   EXPECT_FALSE(inv->client_data()->error_code()) << inv->client_data()->error_code().value();
   
   sres.ParseFromString(inv->client_data()->response().response_string());
@@ -1026,10 +1033,56 @@ TEST(invoker_backend_register_tests, backend_invoker_active_rpc)
   test_proto::Response res;  
 
   req.SerializeToString(inv->client_data()->request().mutable_request_string());
+
+  // second call start 
+  InProcessInvoker::shptr inv2(new InProcessInvoker(*b));
+
+
+  inv2->reset();  
+  sreq.set_service_ordinal(1);
+
+  inv2->client_data()->request().Clear();
+  inv2->client_data()->request().set_service_ordinal(0);
+  inv2->client_data()->request().set_request_ordinal(2);
+  sreq.SerializeToString(inv2->client_data()->request().mutable_request_string());
+ 
+  b->invoke(*inv2);
+  EXPECT_EQ(b->client_count(), 2);
+
+  EXPECT_FALSE(inv2->client_data()->error_code()) << inv2->client_data()->error_code().value();
+  
+  sres.ParseFromString(inv2->client_data()->response().response_string());
+  EXPECT_EQ(sres.error(),basic_protocol::NO_SUBSCRIBE_SERVICE_ERROR);
+
+
+  inv2->client_data()->request().Clear();
+  inv2->client_data()->request().set_service_ordinal(1);
+  inv2->client_data()->request().set_request_ordinal(0);
+
+  req.SerializeToString(inv2->client_data()->request().mutable_request_string());
+ 
+   
   boost::thread t(boost::bind<void>(in_thread_invoker(),b,inv));
+  boost::thread t2(boost::bind<void>(in_thread_invoker(),b,inv2));
+  boost::this_thread::sleep(boost::posix_time::seconds(1));
+
+  EXPECT_EQ(b->client_count(),2);
+
   boost::thread t1(boost::bind(&BackEnd::shutdown,b,5));
-  s_p->impl().notify.notify_one();
+  //boost::this_thread::sleep(boost::posix_time::seconds(3));
+
+  // second call end.
+  EXPECT_EQ(b->rpc_count(),2);
+
+  s_p->impl().notify.notify_all();
+  //boost::this_thread::sleep(boost::posix_time::seconds(5));
+  
   t1.join();
+  EXPECT_EQ(b->rpc_count(), 0);
+  EXPECT_EQ(b->client_count(),0);
+
+
+  
 }
 
 
