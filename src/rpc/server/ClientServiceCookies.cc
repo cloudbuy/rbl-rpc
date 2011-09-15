@@ -7,6 +7,8 @@ namespace rubble { namespace rpc {
   // ~ClientServiceCookies ////////////////////////////////////////////////////
   ClientServiceCookies::~ClientServiceCookies()
   {
+    boost::lock_guard<boost::mutex> lock(m_mutex);
+
     BOOST_FOREACH(t_service_client_cookie_map * sm, m_service_cookie_vector)
     {
       if( sm != NULL)
@@ -18,6 +20,8 @@ namespace rubble { namespace rpc {
   // set_size /////////////////////////////////////////////////////////////////
   void ClientServiceCookies::set_size(std::size_t sz)
   {
+    boost::lock_guard<boost::mutex> lock(m_mutex);
+
     BOOST_ASSERT_MSG( !m_service_cookie_vector.size() > 0,
       "SIZE MAY ONLY BE SET ONCE");
           
@@ -30,6 +34,8 @@ namespace rubble { namespace rpc {
   delete_cookie(  common::ordinal_type service_ordinal,
                   ClientData * data_key)
   {
+    boost::lock_guard<boost::mutex> lock(m_mutex);
+
     BOOST_ASSERT_MSG( !(service_ordinal > m_service_cookie_vector.size()-1),
       "SERVICE ORDINAL TO RETRIEVE COOKIE IS OUT OF RANGE, THIS SHOULD HAVE BEEN"
       " VERIFIED EARLIER");
@@ -57,6 +63,8 @@ namespace rubble { namespace rpc {
   OP_ERROR_CODE ClientServiceCookies::
   cookie_count(common::ordinal_type service_ordinal, std::size_t & sz)
   {
+    boost::lock_guard<boost::mutex> lock(m_mutex);
+    
     BOOST_ASSERT_MSG( !(service_ordinal > m_service_cookie_vector.size()-1),
       "SERVICE ORDINAL TO RETRIEVE COOKIE IS OUT OF RANGE, THIS SHOULD HAVE BEEN"
       " VERIFIED EARLIER");
@@ -75,7 +83,9 @@ namespace rubble { namespace rpc {
   // activate_service_with_ordinal ////////////////////////////////////////////
   void ClientServiceCookies::
   activate_service_with_ordinal(common::ordinal_type ordinal)
-  { 
+  {
+    boost::lock_guard<boost::mutex> lock(m_mutex);
+     
     BOOST_ASSERT_MSG( m_service_cookie_vector.size() > ordinal ,
       "SERVICE ORDINAL IS OUT OF RANGE, THIS SHOULD HAVE BEEN"
       " VERIFIED EARLIER");
@@ -95,6 +105,8 @@ namespace rubble { namespace rpc {
       ClientData * data_key,
       ClientCookie ** cookie )
   {
+    boost::lock_guard<boost::mutex> lock(m_mutex);
+
     BOOST_ASSERT_MSG( !(service_ordinal > m_service_cookie_vector.size()-1),
       "SERVICE ORDINAL TO RETRIEVE COOKIE IS OUT OF RANGE, THIS SHOULD HAVE BEEN"
       " VERIFIED EARLIER");
@@ -126,6 +138,9 @@ namespace rubble { namespace rpc {
   contains_cookie(common::ordinal_type service_ordinal, 
     ClientData * data_key) const 
   {
+    boost::lock_guard<boost::mutex> lock(
+      const_cast<ClientServiceCookies *>(this)->m_mutex );
+
     BOOST_ASSERT_MSG( ! (service_ordinal > m_service_cookie_vector.size()-1),
       "SERVICE ORDINAL TO RETRIEVE COOKIE IS OUT OF RANGE, THIS SHOULD HAVE BEEN"
       " VERIFIED EARLIER");

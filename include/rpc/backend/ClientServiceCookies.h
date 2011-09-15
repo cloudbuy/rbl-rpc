@@ -3,6 +3,7 @@
 #include <rpc/backend/ClientData.h>
 #include <boost/foreach.hpp>
 #include <boost/assert.hpp>
+#include <boost/thread.hpp>
 #include <map>
 
 
@@ -97,7 +98,8 @@ namespace rubble { namespace rpc {
     OP_ERROR_CODE contains_cookie ( common::ordinal_type service_ordinal, 
                                     ClientData * data_key) const; 
   private:
-    t_service_cookie_vector m_service_cookie_vector;
+    t_service_cookie_vector   m_service_cookie_vector;
+    boost::mutex              m_mutex;
   };
 
 
