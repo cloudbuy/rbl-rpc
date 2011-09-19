@@ -223,7 +223,6 @@ namespace rubble { namespace rpc {
   // connect //////////////////////////////////////////////////////////////////
   void BackEnd::connect(ClientData::shptr client_data)
   {
-    boost::lock_guard<boost::recursive_mutex> lock(m_mutex);
     m_connected_clients.insert(client_data);
   }
   //-------------------------------------------------------------------------//
@@ -231,8 +230,6 @@ namespace rubble { namespace rpc {
   // disconect ////////////////////////////////////////////////////////////////
   void BackEnd::disconect(ClientData::shptr client_data)
   {
-    boost::lock_guard<boost::recursive_mutex> lock(m_mutex);
-    
     int m_sz = m_services.size();
 
     ClientCookie * client_cookie;

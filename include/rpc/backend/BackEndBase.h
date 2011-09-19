@@ -32,7 +32,53 @@ namespace rubble { namespace rpc {
     // are still connected. 
     BACKEND_WAITING_ON_CLIENT_DISCONECTIONS
   };
-     
+  
+  class SynchronisedBackEndState
+  {
+  public:
+    SynchronisedBackEndState()
+      : m_active_rpc_count(0),
+        m_accepting_requests(false)
+    { 
+    }
+
+    bool start_a_request()
+    {
+      boost::lock_guard<boost::mutex> lock (m_mutex);
+  
+      if(m_accepting_requests)
+      {
+        m_active_rpc_count++;
+        return true;
+      }
+      else
+        return false;
+    }
+    
+    void end_a_request()
+    {
+      boost::lock_guard<boost::mutex> lock (m_mutex);
+      m_active_rpc_count--;
+    }
+    
+    void begin_accepting_requests()
+    {
+      boost::lock_guard<boost::mutex> lock (m_mutex);
+      m_accepting_requests = true;
+    }
+
+    void stop_accepting_requests()
+    {
+      boost::lock_guard<boost::mutex> lock (m_mutex);
+      m_accepting_requests = false;
+    }
+
+  private:
+    bool m_accepting_requests;
+    boost::int32_t m_active_rpc_count;
+    boost::mutex m_mutex;
+  };
+ 
   class BackEnd : boost::noncopyable
   {
   public:
@@ -96,8 +142,10 @@ namespace rubble { namespace rpc {
     int                                                 m_pool_size;
     boost::thread_group                                 m_thread_group;
     boost::system::error_code                           m_ec;
+
     ClientServiceCookies                                m_client_service_cookies;
-    std::set<ClientData::wptr>                          m_connected_clients;    
+    ConnectedClientsSet                                 m_connected_clients;    
+    SynchronisedBackEndState                            m_synchronised_state;
 
  
     common::OidContainer<common::Oid, ServiceBase::shp> m_services;

@@ -4,6 +4,9 @@
 #include <rpc/proto/BasicProtocol.pb.h>
 #include <boost/thread.hpp>
 #include <boost/shared_array.hpp>
+#include <boost/thread.hpp>
+
+#include <set>
 
 namespace rubble { namespace rpc {
   struct Buffer
@@ -99,6 +102,34 @@ namespace rubble { namespace rpc {
     bool                                    m_rpc_active;
     bool                                    m_should_disconect;
     bool                                    m_client_established;
+  };
+
+  class ConnectedClientsSet  {
+  public:
+    typedef std::set<ClientData::wptr> set_type;
+
+    std::pair<set_type::iterator, bool> insert (const set_type::value_type &x)
+    {
+      boost::lock_guard<boost::mutex> lock(m_mutex); 
+      
+      return m_set.insert(x);
+    }
+    set_type::size_type erase (const set_type::key_type & x)
+    {
+      boost::lock_guard<boost::mutex> lock(m_mutex); 
+      
+      return m_set.erase(x);
+    }
+    set_type::size_type size() const
+    {
+      boost::lock_guard<boost::mutex> lock(
+        const_cast<ConnectedClientsSet *>(this)-> m_mutex); 
+    
+      return m_set.size();
+    }
+  private: 
+    set_type m_set;
+    boost::mutex m_mutex;
   };
 } }
 #endif
