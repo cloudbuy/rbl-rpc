@@ -66,7 +66,6 @@ namespace rubble { namespace rpc {
   // is_useable ///////////////////////////////////////////////////////////////
   bool BackEnd::is_useable()
   {
-    boost::lock_guard<boost::recursive_mutex> lock(m_mutex);
     return (m_is_sealed && !m_io_service.stopped());
   }
   //-------------------------------------------------------------------------//

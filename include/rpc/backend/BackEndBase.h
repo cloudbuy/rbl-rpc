@@ -186,7 +186,6 @@ namespace rubble { namespace rpc {
     boost::asio::io_service                             m_io_service;
 
     boost::scoped_ptr<boost::asio::io_service::work>    m_work;
-    boost::recursive_mutex                              m_mutex;
     
     BackEndShutdownState                                m_shutdown_state;
   };
