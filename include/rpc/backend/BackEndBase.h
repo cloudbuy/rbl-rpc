@@ -54,7 +54,13 @@ namespace rubble { namespace rpc {
       else
         return false;
     }
-    
+  
+    boost::int32_t rpc_count()
+    {
+      boost::lock_guard<boost::mutex> lock (m_mutex);
+      return m_active_rpc_count;
+    }
+  
     void end_a_request()
     {
       boost::lock_guard<boost::mutex> lock (m_mutex);
@@ -72,11 +78,39 @@ namespace rubble { namespace rpc {
       boost::lock_guard<boost::mutex> lock (m_mutex);
       m_accepting_requests = false;
     }
+    
+    bool is_accepting_requests()
+    {
+      boost::lock_guard<boost::mutex> lock (m_mutex);
+      return m_accepting_requests;
+    }
 
+    template<typename Manager>
+    boost::signals::connection register_invoker_manager(Manager & m)
+    {
+      boost::lock_guard<boost::mutex> lock (m_mutex);
+      m.connect_to_backend();
+      return f_disc_invoker_sig.connect(
+        boost::bind( &Manager::disconect_from_backend, &m));
+    }
+
+    std::size_t manager_count()
+    {
+      boost::lock_guard<boost::mutex> lock (m_mutex);
+      return f_disc_invoker_sig.num_slots();
+    }
+
+    void disconect_managers()
+    {
+      boost::lock_guard<boost::mutex> lock (m_mutex);
+      f_disc_invoker_sig();
+    }
   private:
     bool m_accepting_requests;
     boost::int32_t m_active_rpc_count;
     boost::mutex m_mutex;
+    boost::signal<void() >  f_disc_invoker_sig;
+
   };
  
   class BackEnd : boost::noncopyable
@@ -95,7 +129,7 @@ namespace rubble { namespace rpc {
    
     void start();
     bool is_useable();
-    boost::uint32_t rpc_count();
+    boost::int32_t rpc_count();
     void end_rpc(ClientData::ptr client_data); 
     void register_and_init_service(ServiceBase::shp service);
     void block_till_termination();
@@ -113,10 +147,7 @@ namespace rubble { namespace rpc {
     template<typename Manager>
     boost::signals::connection register_invoker_manager(Manager & m)
     {
-      boost::lock_guard<boost::timed_mutex> act_lock(m_rpc_activity_mutex); 
-      m.connect_to_backend();
-      return f_disc_invoker_sig.connect(
-        boost::bind( &Manager::disconect_from_backend, &m));
+      return m_synchronised_state.register_invoker_manager(m);
     }
 
 
@@ -134,7 +165,6 @@ namespace rubble { namespace rpc {
 
     t_services & services() { return m_services;}
     ClientServiceCookies & cookies() { return m_client_service_cookies; }
-    boost::recursive_mutex & mutex() { return m_mutex; }
 
     basic_protocol::SourceConnectionType                m_source_type;
     basic_protocol::DestinationConnectionType           m_backend_type;
@@ -153,18 +183,12 @@ namespace rubble { namespace rpc {
     bool                                                m_is_sealed;
     bool                                                m_has_shutdown;
 
-    boost::signal<void() >                              f_disc_invoker_sig;
- 
     boost::asio::io_service                             m_io_service;
 
     boost::scoped_ptr<boost::asio::io_service::work>    m_work;
     boost::recursive_mutex                              m_mutex;
     
-    boost::timed_mutex                                  m_rpc_activity_mutex;
-    boost::uint32_t                                     m_rpc_count;
-    bool                                                m_accepting_requests;
     BackEndShutdownState                                m_shutdown_state;
-
   };
 
   class BasicProtocolImpl
@@ -211,77 +235,59 @@ namespace rubble { namespace rpc {
      BackEnd * m_backend;
   };
 
-#define RBL_RPC_START_RPC(client_data)                                          \
-  {                                                                             \
-    boost::lock_guard<boost::timed_mutex> act_lock(m_rpc_activity_mutex);       \
-    if( ! m_accepting_requests)                                                 \
-    {                                                                           \
-      client_data->error_code().assign(                                         \
-        error_codes::RBL_BACKEND_NOT_ACCEPTING_REQUESTS, rpc_backend_error);    \
-      client_data->response().set_error(basic_protocol::NOT_ACCEPTING_REQUESTS);\
-      return;                                                                   \
-    }                                                                           \
-    client_data->start_rpc();                                                   \
-    m_rpc_count++;                                                              \
-  }
-
-#define RBL_RPC_END_RPC(client_data)                                            \
-  {                                                                             \
-    boost::lock_guard<boost::timed_mutex> act_lock(m_rpc_activity_mutex);       \
-    m_rpc_count--;                                                              \
-  }                                                                             \
-  client_data->end_rpc();
-
-  inline boost::uint32_t BackEnd::rpc_count() 
-  { 
-    boost::lock_guard<boost::timed_mutex> act_lock(m_rpc_activity_mutex); 
-    return m_rpc_count;
+  inline boost::int32_t BackEnd::rpc_count()
+  {
+    return m_synchronised_state.rpc_count();
   }
 
   inline std::size_t BackEnd::manager_count()
   {
-    boost::lock_guard<boost::timed_mutex> act_lock(m_rpc_activity_mutex); 
-    return f_disc_invoker_sig.num_slots();
+    return m_synchronised_state.manager_count(); 
   }
 
   inline std::size_t BackEnd::client_count()
   {
-    boost::lock_guard<boost::timed_mutex> act_lock(m_rpc_activity_mutex); 
     return m_connected_clients.size();
   }
 
 
   inline void BackEnd::end_rpc(ClientData::ptr client_data)
   {
-    RBL_RPC_END_RPC(client_data);
+    m_synchronised_state.end_a_request();
+    client_data->end_rpc();
   }
 
-#define RBL_RPC_ERROR_RETURN_RPC(client_data)                                   \
-  {                                                                             \
-    boost::lock_guard<boost::timed_mutex> act_lock(m_rpc_activity_mutex);       \
-    m_rpc_count--;                                                              \
-    if(! m_accepting_requests )                                                 \
-    {}                                                                          \
-  }                                                                             \
-  client_data->end_rpc();                                                       \
-  return;
   
   template< typename Invoker>
   void BackEnd::invoke(Invoker & i)
   {
-    RBL_RPC_START_RPC(i.client_data());      
-  
-    basic_protocol::ClientRequest & request = i.client_data()->request();
+    ClientData::shptr client_data = i.client_data();
+
+    if( m_synchronised_state.start_a_request() )
+    {
+      client_data->start_rpc();
+    }
+    else 
+    {
+      client_data->error_code().assign(                                         
+        error_codes::RBL_BACKEND_NOT_ACCEPTING_REQUESTS, rpc_backend_error);    
+      client_data->response().set_error(basic_protocol::NOT_ACCEPTING_REQUESTS);
+      return;                                                                   
+    } 
+
+    basic_protocol::ClientRequest & request = client_data->request();
 
     ServiceBase::shp * service = 
       m_services[request.service_ordinal()];
+
     // check if service with ordinal exists
     if(service == NULL)
     {
-      i.client_data()->error_code().assign 
+      client_data->error_code().assign 
         ( error_codes::RBL_BACKEND_INVOKE_NO_SERVICE_WITH_ORDINAL_ERROR,
           rpc_backend_error);
-      RBL_RPC_ERROR_RETURN_RPC(i.client_data());
+      end_rpc(client_data.get());
+      return;
     }
  
     i.service = service->get();      
@@ -289,46 +295,47 @@ namespace rubble { namespace rpc {
     // check if method ordinal is defined in the service
     if( ! i.service->contains_function_at_ordinal( request.request_ordinal() )) 
     {
-      i.client_data()->error_code().assign 
+      client_data->error_code().assign 
         ( error_codes::RBL_BACKEND_INVOKE_NO_REQUEST_WITH_ORDINAL_ERROR,
           rpc_backend_error);
-      
-      RBL_RPC_ERROR_RETURN_RPC(i.client_data());
-      
+      end_rpc(client_data.get());
+      return;
     }
 
-    { // lock_scope_lock
-      boost::lock_guard<boost::recursive_mutex> lock(m_mutex);
-      m_client_service_cookies.create_or_retrieve_cookie(
-        request.service_ordinal(), i.client_data().get(),&i.client_cookie);
-    }
+    m_client_service_cookies.create_or_retrieve_cookie(
+      request.service_ordinal(), i.client_data().get(),&i.client_cookie);
+
     // Check if subscribed, service 0 does not require an explicit subscribe 
     // event Subscription will be done implicetly
     if(request.service_ordinal() != 0)       
     {
-      if( !i.client_cookie->is_subscribed())
+      if( ! i.client_cookie->is_subscribed())
       {
-        i.client_data()->error_code().assign(
+        client_data->error_code().assign(
           error_codes::RBL_BACKEND_INVOKE_CLIENT_NOT_SUBSCRIBED, 
           rpc_backend_error); 
-        RBL_RPC_ERROR_RETURN_RPC(i.client_data());
+       
+        end_rpc(client_data.get());
+        return;
       }
     }
     
     if(request.service_ordinal() == 0 && request.request_ordinal() == 0)
     {
-      if(i.client_data()->is_client_established())
+      if(client_data->is_client_established())
       {  
-        i.client_data()->error_code().assign(
+        client_data->error_code().assign(
           error_codes::RBL_BACKEND_ALLREADY_ESTABLISHED,
           rpc_backend_error);
         basic_protocol::HelloResponse hres;
         hres.set_error_type(basic_protocol::CLIENT_ALLREADY_ESTABLISHED);
         hres.SerializeToString( 
-          i.client_data()->response().mutable_response_string());
+          client_data->response().mutable_response_string());
 
-        i.client_data()->request_disconect();
-        RBL_RPC_ERROR_RETURN_RPC(i.client_data());
+        client_data->request_disconect();
+
+        end_rpc(client_data.get());
+        return;
       }
     }
 //    std::cout << (*service)->name() << "::" << request.request_ordinal() << std::endl; 

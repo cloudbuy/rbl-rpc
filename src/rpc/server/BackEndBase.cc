@@ -12,10 +12,7 @@ namespace rubble { namespace rpc {
       m_work(new boost::asio::io_service::work(m_io_service)),
       m_services(),
       m_is_sealed(false),
-      m_service_count(0),
-      m_rpc_count(0),
-      m_accepting_requests(false) 
-
+      m_service_count(0)
     {
       basic_protocol::basic_protocol<BasicProtocolImpl> * bp =
         new basic_protocol::basic_protocol<BasicProtocolImpl>();
@@ -29,8 +26,6 @@ namespace rubble { namespace rpc {
   // ~BackEnd /////////////////////////////////////////////////////////////////
   BackEnd::~BackEnd()
   {
-    f_disc_invoker_sig();
-
     if(m_is_sealed && !m_io_service.stopped() )
       shutdown();
   }
@@ -63,11 +58,8 @@ namespace rubble { namespace rpc {
       m_thread_group.create_thread(
         boost::bind( &boost::asio::io_service::run, &m_io_service) );
     }
-    
-    {
-      boost::lock_guard<boost::timed_mutex> act_lock(m_rpc_activity_mutex);
-      m_accepting_requests = true;
-    }
+  
+    m_synchronised_state.begin_accepting_requests();  
   }
   //-------------------------------------------------------------------------//
   
@@ -129,7 +121,7 @@ namespace rubble { namespace rpc {
       std::cout << "Not Complete, Waiting On: ";
     
       if( state == BACKEND_SHUTDOWN_WAITING_RPC_END)
-        std::cout << rpc_count() << " rpc call(s) to end." << std::endl;
+        std::cout << m_synchronised_state.rpc_count() << " rpc call(s) to end." << std::endl;
 
       if( state == BACKEND_WAITING_ON_CLIENT_DISCONECTIONS)
         std::cout << manager_count() << " manager(s) and " 
@@ -151,25 +143,23 @@ namespace rubble { namespace rpc {
 
     BOOST_ASSERT_MSG(m_is_sealed, 
       "shutdown should not be run on an unsealed backend");
-   
-     boost::lock_guard<boost::timed_mutex> act_lock(m_rpc_activity_mutex);
       
-    if(m_accepting_requests)
+    if(m_synchronised_state.is_accepting_requests())
     {
-      m_accepting_requests = false;
+      m_synchronised_state.stop_accepting_requests();
       m_shutdown_state = BACKEND_SHUTDOWN_WAITING_RPC_END;
     }
      
     if( m_shutdown_state ==  BACKEND_SHUTDOWN_WAITING_RPC_END)
     {
-      if( m_rpc_count != 0)
+      if( m_synchronised_state.rpc_count() != 0)
       {
         m_shutdown_state = BACKEND_SHUTDOWN_WAITING_RPC_END;
         return BACKEND_SHUTDOWN_WAITING_RPC_END;
       }
       else
       {
-        f_disc_invoker_sig();
+        m_synchronised_state.disconect_managers();
         m_shutdown_state = BACKEND_WAITING_ON_CLIENT_DISCONECTIONS;
       }
     }
@@ -178,7 +168,7 @@ namespace rubble { namespace rpc {
     // TODO disconect client block.
     if( m_shutdown_state == BACKEND_WAITING_ON_CLIENT_DISCONECTIONS)
     {
-      if( f_disc_invoker_sig.num_slots() == 0 &&
+      if( m_synchronised_state.manager_count() == 0 &&
           m_connected_clients.size() == 0 ) 
       { 
       }
@@ -363,12 +353,8 @@ namespace rubble { namespace rpc {
     
     ClientServiceCookies & cookies = m_backend->cookies(); 
     ClientCookie * cookie;
-    { 
-      boost::recursive_mutex & mutex = m_backend->mutex();
-      boost::unique_lock<boost::recursive_mutex> lock(mutex);
-      cookies.create_or_retrieve_cookie(
-        req.service_ordinal(), &cd, &cookie);
-    }
+    
+    cookies.create_or_retrieve_cookie(req.service_ordinal(), &cd, &cookie);
     
     //subcription should only occur once
     if(cookie->is_subscribed())
@@ -409,8 +395,6 @@ namespace rubble { namespace rpc {
     basic_protocol::UnsubscribeServiceRequest & req,
     basic_protocol::UnsubscribeServiceResponse & res )
   {
-    boost::recursive_mutex & mutex = m_backend->mutex();
-    boost::unique_lock<boost::recursive_mutex> lock(mutex);
 
     BackEnd::t_services & services = m_backend->services();
 
