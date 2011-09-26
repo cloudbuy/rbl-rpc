@@ -12,7 +12,8 @@ namespace rubble { namespace rpc {
       m_work(new boost::asio::io_service::work(m_io_service)),
       m_services(),
       m_is_sealed(false),
-      m_service_count(0)
+      m_service_count(0),
+      m_pool_size(0)
     {
       basic_protocol::basic_protocol<BasicProtocolImpl> * bp =
         new basic_protocol::basic_protocol<BasicProtocolImpl>();
@@ -26,7 +27,7 @@ namespace rubble { namespace rpc {
   // ~BackEnd /////////////////////////////////////////////////////////////////
   BackEnd::~BackEnd()
   {
-    if(m_is_sealed && !m_io_service.stopped() )
+    if(m_is_sealed && m_synchronised_state.is_accepting_requests())
       shutdown();
   }
   //-------------------------------------------------------------------------//
@@ -66,7 +67,7 @@ namespace rubble { namespace rpc {
   // is_useable ///////////////////////////////////////////////////////////////
   bool BackEnd::is_useable()
   {
-    return (m_is_sealed && !m_io_service.stopped());
+    return (m_is_sealed && m_synchronised_state.is_accepting_requests());
   }
   //-------------------------------------------------------------------------//
 
