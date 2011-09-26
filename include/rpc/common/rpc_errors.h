@@ -7,7 +7,7 @@
 
 namespace rubble { namespace rpc {
 // ////////////////////////////////////////////////////////////////////////////
-  class InvokerError : public boost::system::error_code
+  class InvokerError : public boost::system::error_category
   {
     const char * name() const { return "Invoker Error"; }
     std::string message(int ev) const { return "error"; }
@@ -24,7 +24,7 @@ namespace rubble { namespace rpc {
   
   #define RBL_INVOKER_THROW_EXCEPTION(x) \
     throw InvokerException() \
-      << rbl_invoker_error_code(x,invoker_error);
+      << rbl_invoker_error_code(boost::system::error_code(x,invoker_error));
 //---------------------------------------------------------------------------//
 
 // ////////////////////////////////////////////////////////////////////////////
