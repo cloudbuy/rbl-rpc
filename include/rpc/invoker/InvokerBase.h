@@ -16,7 +16,7 @@ namespace rubble { namespace rpc {
     virtual void reset() = 0;
     virtual void after_post() =0; 
     virtual void operator() () = 0;   
-    virtual void invoke() = 0;
+    virtual bool invoke() = 0;
 
     
 

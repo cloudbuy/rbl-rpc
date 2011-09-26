@@ -36,7 +36,8 @@ namespace rubble { namespace rpc {
         "RPC SHOULD NOT BE SET WHEN RESETING AN OBJECT FOR RPC");
     }
 
-    void invoke()
+    // TODO fix the error handling (bool return)
+    bool invoke()
     {
       boost::uint32_t flag_return;
       boost::uint32_t msg_size_return=0;
@@ -77,7 +78,7 @@ namespace rubble { namespace rpc {
             google::protobuf::io::CodedInputStream cis2(m_buffer.get(),m_buffer.size());
 
             response().ParseFromCodedStream(&cis2);
-            
+             
           }
           else
             std::cout << "error" << std::endl;
@@ -87,6 +88,7 @@ namespace rubble { namespace rpc {
       }
       else
         std::cout << "error" << std::endl;
+      return false;
     }
     
     void operator() ()

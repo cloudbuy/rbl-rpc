@@ -70,7 +70,8 @@ namespace rubble { namespace rpc {
         disconect_from_backend();
       }
     }
-  
+ 
+    // called by the register_invoker_manager frunction 
     void connect_to_backend()
     {
       BOOST_ASSERT(m_connected == false);
@@ -105,9 +106,9 @@ namespace rubble { namespace rpc {
         "RPC SHOULD NOT BE SET WHEN RESETING AN OBJECT FOR RPC");
     }
    
-    void invoke()
+    bool invoke()
     {
-      m_backend.invoke(*this);
+      return m_backend.invoke(*this);
     }
  
     void operator() ()

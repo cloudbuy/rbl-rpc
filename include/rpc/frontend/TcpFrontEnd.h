@@ -60,9 +60,6 @@ struct TcpFrontEndConnectionInvoker : public InvokerBase
     m_client_data->error_code().clear();
   }
 
-  void after_post()   
-  {
-  }
 
   void operator() ()  
   {
@@ -71,10 +68,13 @@ struct TcpFrontEndConnectionInvoker : public InvokerBase
     handle_write_response();  
   };
 
-  void invoke()       
+  void after_post()   
   {
-    response().set_error(basic_protocol::REQUEST_SUCCESS);
-    m_backend.invoke(*this);
+  }
+
+  bool invoke()       
+  {
+    return m_backend.invoke(*this);
   };
 
 
@@ -134,7 +134,8 @@ struct TcpFrontEndConnectionInvoker : public InvokerBase
       m_client_data->request().ParseFromArray( buffer->get(), bytes_sent);
       io_state = IO_REQUEST_DISPATCHED_ACTIVE;
 
-      invoke(); 
+      if(invoke())
+        handle_write_response();
     }
     else handle_error(error,"handled_read_body");
   }

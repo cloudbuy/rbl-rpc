@@ -25,12 +25,13 @@
 namespace rubble { namespace rpc {
   enum BackEndShutdownState
   {
-    BACKEND_SHUTDOWN_COMPLETE = 0,
+    ACTIVE = 0,
     // rpc has ended threads will be terminated on next call.
     BACKEND_SHUTDOWN_WAITING_RPC_END,
     // all invokers have had disconect called on them, certain clients
     // are still connected. 
-    BACKEND_WAITING_ON_CLIENT_DISCONECTIONS
+    BACKEND_WAITING_ON_CLIENT_DISCONECTIONS,
+    BACKEND_SHUTDOWN_COMPLETE
   };
   
   class SynchronisedBackEndState
@@ -110,7 +111,6 @@ namespace rubble { namespace rpc {
     boost::int32_t m_active_rpc_count;
     boost::mutex m_mutex;
     boost::signal<void() >  f_disc_invoker_sig;
-
   };
  
   class BackEnd : boost::noncopyable
@@ -127,6 +127,9 @@ namespace rubble { namespace rpc {
     bool is_sealed() { return m_is_sealed; }
     void seal() { m_is_sealed = true;}
    
+    void pause_requests() { m_synchronised_state.stop_accepting_requests(); }
+    void resume_requests() { m_synchronised_state.begin_accepting_requests(); } 
+
     void start();
     bool is_useable();
     boost::int32_t rpc_count();
@@ -159,7 +162,7 @@ namespace rubble { namespace rpc {
       { return m_client_service_cookies; }
 
     template< typename Invoker>
-    void invoke(Invoker & i);
+    bool invoke(Invoker & i);
   protected:
     friend class BasicProtocolImpl;
 
@@ -181,7 +184,6 @@ namespace rubble { namespace rpc {
     common::OidContainer<common::Oid, ServiceBase::shp> m_services;
     boost::uint16_t                                     m_service_count;
     bool                                                m_is_sealed;
-    bool                                                m_has_shutdown;
 
     boost::asio::io_service                             m_io_service;
 
@@ -258,9 +260,11 @@ namespace rubble { namespace rpc {
 
   
   template< typename Invoker>
-  void BackEnd::invoke(Invoker & i)
+  bool BackEnd::invoke(Invoker & i)
   {
     ClientData::shptr client_data = i.client_data();
+
+    // reset the error state
     client_data->response().set_error(basic_protocol::REQUEST_SUCCESS);
     client_data->error_code().clear();
 
@@ -273,7 +277,7 @@ namespace rubble { namespace rpc {
       client_data->error_code().assign(                                         
         error_codes::RBL_BACKEND_NOT_ACCEPTING_REQUESTS, rpc_backend_error);    
       client_data->response().set_error(basic_protocol::NOT_ACCEPTING_REQUESTS);
-      return;                                                                   
+      return true;                                                                   
     } 
 
     basic_protocol::ClientRequest & request = client_data->request();
@@ -289,7 +293,7 @@ namespace rubble { namespace rpc {
           rpc_backend_error);
       client_data->response().set_error(basic_protocol::REQUEST_NO_SERVICE_WITH_ORDINAL);
       end_rpc(client_data.get());
-      return;
+      return true;
     }
  
     i.service = service->get();      
@@ -302,7 +306,7 @@ namespace rubble { namespace rpc {
           rpc_backend_error);
       client_data->response().set_error(basic_protocol::REQUEST_NO_FUNCTION_WITH_ORDINAL);
       end_rpc(client_data.get());
-      return;
+      return true;
     }
 
     m_client_service_cookies.create_or_retrieve_cookie(
@@ -319,7 +323,7 @@ namespace rubble { namespace rpc {
           rpc_backend_error); 
         client_data->response().set_error(basic_protocol::REQUEST_NOT_SUBSCRIBED);
         end_rpc(client_data.get());
-        return;
+        return true;
       }
     }
     
@@ -338,12 +342,13 @@ namespace rubble { namespace rpc {
         client_data->request_disconect();
 
         end_rpc(client_data.get());
-        return;
+        return true;
       }
     }
 //    std::cout << (*service)->name() << "::" << request.request_ordinal() << std::endl; 
     m_io_service.post(boost::bind(&Invoker::operator(),boost::ref(i)));
     i.after_post();
+    return false;
   }
 
 } }

@@ -217,7 +217,7 @@ void create_client_service( Printer & gen_out, const ServiceDescriptor * sd)
           gen_out.Print("req.SerializeToString(m_invoker.request().mutable_request_string());\n\n");
           gen_out.Print("m_invoker.invoke();\n");
           gen_out.Print("if(m_invoker.response().error() != rubble::rpc::basic_protocol::REQUEST_SUCCESS)\n");
-          gen_out.Print("{\n  RBL_INVOKER_THROW_EXCEPTION(m_invoker.response().error()); }\n\n");
+          gen_out.Print("{\n  RBL_INVOKER_THROW_EXCEPTION(m_invoker.response().error());\n }\n\n");
 // Don't need the following, the request and response objects are distinct
 //          gen_out.Print("if( !res.ParseFromString( m_client_request.response_string()))\n");
 //          gen_out.Indent();
