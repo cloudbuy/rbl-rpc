@@ -46,9 +46,10 @@ namespace {
         gen_out.Print("bool res = m_in.ParseFromString(cd.request().request_string());\n");
         gen_out.Print("if(!res)\n");
         gen_out.Print("{\n"); 
-        gen_out.Print("cd.error_code().assign(\n");
-        gen_out.Print("  error_codes::RBL_BACKEND_INVOKE_REQUEST_STRING_PARSE_ERROR,\n");
-        gen_out.Print("  rpc_backend_error);\n");
+        gen_out.Print("  cd.error_code().assign(\n");
+        gen_out.Print("    error_codes::RBL_BACKEND_INVOKE_REQUEST_STRING_PARSE_ERROR,\n");
+        gen_out.Print("    rpc_backend_error);\n");
+        gen_out.Print("  cd.response().set_error(basic_protocol::REQUEST_STRING_PARSE_ERROR);\n");
         gen_out.Print("  return;\n");
         gen_out.Print("}\n\n");
         gen_out.Print("impl.$M_NAME$(client_cookie_in,cd,m_in,m_out);\n\n","M_NAME",method->name());
@@ -58,9 +59,10 @@ namespace {
 //        gen_out.Print("res = m_out.SerializeToString( request.mutable_response_string());\n");
         gen_out.Print("if(!res)\n");
         gen_out.Print("{\n"); 
-        gen_out.Print("cd.error_code().assign(\n");
-        gen_out.Print("  error_codes::RBL_BACKEND_INVOKE_RESPONSE_STRING_SERIALIZE_ERROR,\n");
-        gen_out.Print("  rpc_backend_error);\n");
+        gen_out.Print("  cd.error_code().assign(\n");
+        gen_out.Print("    error_codes::RBL_BACKEND_INVOKE_RESPONSE_STRING_SERIALIZE_ERROR,\n");
+        gen_out.Print("    rpc_backend_error);\n");
+        gen_out.Print("  cd.response().set_error(basic_protocol::REQUEST_STRING_SERIALIZE_ERROR);\n");
         gen_out.Print("  return;\n");
         gen_out.Print("}\n");
      }
@@ -214,6 +216,8 @@ void create_client_service( Printer & gen_out, const ServiceDescriptor * sd)
           gen_out.Print("m_invoker.request().set_request_ordinal( * m_service_method_map[method_id]);\n");
           gen_out.Print("req.SerializeToString(m_invoker.request().mutable_request_string());\n\n");
           gen_out.Print("m_invoker.invoke();\n");
+          gen_out.Print("if(m_invoker.response().error() != rubble::rpc::basic_protocol::REQUEST_SUCCESS)\n{\n}\n\n");
+          
 // Don't need the following, the request and response objects are distinct
 //          gen_out.Print("if( !res.ParseFromString( m_client_request.response_string()))\n");
 //          gen_out.Indent();

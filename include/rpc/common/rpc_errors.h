@@ -3,11 +3,31 @@
 
 #include <boost/exception/all.hpp>
 #include <boost/system/error_code.hpp>
+#include <rpc/proto/BasicProtocol.pb.h>
 
 namespace rubble { namespace rpc {
+// ////////////////////////////////////////////////////////////////////////////
+  class InvokerError : public boost::system::error_code
+  {
+    const char * name() const { return "Invoker Error"; }
+    std::string message(int ev) const { return "error"; }
+  };
 
+  extern InvokerError invoker_error;
+  
+  struct InvokerException : boost::exception
+  {
+  };  
 
+  typedef boost::error_info<struct tag_invoker_error_code, 
+                            boost::system::error_code> rbl_invoker_error_code;
+  
+  #define RBL_INVOKER_THROW_EXCEPTION(x) \
+    throw InvokerException() \
+      << rbl_invoker_error_code(x,invoker_error);
+//---------------------------------------------------------------------------//
 
+// ////////////////////////////////////////////////////////////////////////////
   namespace error_codes {
     enum e_code
     {
@@ -56,6 +76,7 @@ namespace rubble { namespace rpc {
   #define RBL_BACKEND_THROW_EXCEPTION(x) \
     throw BackEndInitiationException() \
       << rbl_backend_error_code(boost::system::error_code(x, rpc_backend_error);
+//---------------------------------------------------------------------------//
 } }
 
 #endif 

@@ -261,6 +261,8 @@ namespace rubble { namespace rpc {
   void BackEnd::invoke(Invoker & i)
   {
     ClientData::shptr client_data = i.client_data();
+    client_data->response().set_error(basic_protocol::REQUEST_SUCCESS);
+    client_data->error_code().clear();
 
     if( m_synchronised_state.start_a_request() )
     {
@@ -285,6 +287,7 @@ namespace rubble { namespace rpc {
       client_data->error_code().assign 
         ( error_codes::RBL_BACKEND_INVOKE_NO_SERVICE_WITH_ORDINAL_ERROR,
           rpc_backend_error);
+      client_data->response().set_error(basic_protocol::REQUEST_NO_SERVICE_WITH_ORDINAL);
       end_rpc(client_data.get());
       return;
     }
@@ -297,6 +300,7 @@ namespace rubble { namespace rpc {
       client_data->error_code().assign 
         ( error_codes::RBL_BACKEND_INVOKE_NO_REQUEST_WITH_ORDINAL_ERROR,
           rpc_backend_error);
+      client_data->response().set_error(basic_protocol::REQUEST_NO_FUNCTION_WITH_ORDINAL);
       end_rpc(client_data.get());
       return;
     }
@@ -313,7 +317,7 @@ namespace rubble { namespace rpc {
         client_data->error_code().assign(
           error_codes::RBL_BACKEND_INVOKE_CLIENT_NOT_SUBSCRIBED, 
           rpc_backend_error); 
-       
+        client_data->response().set_error(basic_protocol::REQUEST_NOT_SUBSCRIBED);
         end_rpc(client_data.get());
         return;
       }

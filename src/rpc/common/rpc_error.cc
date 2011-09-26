@@ -2,4 +2,5 @@
 
 namespace rubble { namespace rpc {
   RpcBackEndError rpc_backend_error;
+  InvokerError invoker_error;
 } }
