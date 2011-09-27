@@ -13,20 +13,24 @@
 using namespace rubble::rpc;
 using namespace rubble::rpc::test_proto;
 
-  class test_service_one_impl
+// Note:
+//
+// the double hello issue is tested in the ServiceClientFactory Constructor
+
+class test_service_one_impl
+{
+public:
+  typedef ClientCookieBase t_client_cookie;
+  void init(boost::system::error_code & ec) { ec.clear(); }
+  void subscribe(ClientCookie & client_cookie, ClientData & cd,
+    std::string * in, std::string * out) 
   {
-  public:
-    typedef ClientCookieBase t_client_cookie;
-    void init(boost::system::error_code & ec) { ec.clear(); }
-    void subscribe(ClientCookie & client_cookie, ClientData & cd,
-      std::string * in, std::string * out) 
-    {
-    }
-    void teardown(boost::system::error_code & ec) { ec.clear(); }
-    void unsubscribe(ClientCookie & client_cookie, ClientData & cd) {}
-    void dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & ){}
-  private:
-  };
+  }
+  void teardown(boost::system::error_code & ec) { ec.clear(); }
+  void unsubscribe(ClientCookie & client_cookie, ClientData & cd) {}
+  void dummy_rpc(ClientCookie &,ClientData &,Request & ,Response & ){}
+private:
+};
 
 TEST(RPC_EXCEPTION_TEST, IN_PROCESS_NOT_ACCEPTING)
 {
@@ -298,6 +302,185 @@ TEST(RPC_EXCEPTION_TEST, TCP_PROCESS_NO_SERVICE_WITH_ORDINAL)
   FAIL() << "Expected exception not thrown";
 }
 
+TEST(RPC_EXCEPTION_TEST, IN_PROCESS_NO_REQUEST_WITH_ORDINAL)
+{
+    BasicProtocolMethodMap m_method_map;
+
+    *m_method_map[1]=100;
+
+    BackEnd b(basic_protocol::SOURCE_RELAY , basic_protocol::TARGET_MARSHALL);
+    b.pool_size(1);
+
+    ServiceBase::shp s(new test_service_one<test_service_one_impl>());
+    b.register_and_init_service(s);
+    b.start();
+    InProcessInvoker ipi(b);  
+    
+    BPC bpc(ipi);
+
+    bpc.set_service_ordinal(0);
+    bpc.remap_ordinals(m_method_map);
+
+    try 
+    {
+      basic_protocol::ListServicesRequest lreq;
+      basic_protocol::ListServicesResponse lres;
+    
+      bpc.list_services(lreq,lres);
+    }
+    catch(InvokerException ie)
+    {
+      boost::system::error_code * e = boost::get_error_info<rbl_invoker_error_code>(ie);
+      
+      EXPECT_EQ(e->value(), basic_protocol::REQUEST_NO_FUNCTION_WITH_ORDINAL);
+      return;
+    }
+    catch(BackEndException b)
+    {
+      FAIL() << "should not throw a BackEndException";
+    }
+    catch(...)
+    {
+      FAIL() << "Wrong type of exception";
+    }
+  FAIL() << "Expected exception not thrown";
+}
+
+TEST(RPC_EXCEPTION_TEST, TCP_PROCESS_NO_REQUEST_WITH_ORDINAL)
+{
+    BasicProtocolMethodMap m_method_map;
+
+    *m_method_map[1]=100;
+
+    BackEnd b(basic_protocol::SOURCE_RELAY , basic_protocol::TARGET_MARSHALL);
+    b.pool_size(1);
+
+    ServiceBase::shp s(new test_service_one<test_service_one_impl>());
+    b.register_and_init_service(s);
+    b.start();
+    
+    TcpFrontEnd tfe(b,5555);
+    TcpInvoker ti("127.0.0.1", 5555);
+    tfe.start();
+
+    BPC bpc(ti);
+
+    bpc.set_service_ordinal(0);
+    bpc.remap_ordinals(m_method_map);
+
+    try 
+    {
+      basic_protocol::ListServicesRequest lreq;
+      basic_protocol::ListServicesResponse lres;
+    
+      bpc.list_services(lreq,lres);
+    }
+    catch(InvokerException ie)
+    {
+      boost::system::error_code * e = boost::get_error_info<rbl_invoker_error_code>(ie);
+      
+      EXPECT_EQ(e->value(), basic_protocol::REQUEST_NO_FUNCTION_WITH_ORDINAL);
+      return;
+    }
+    catch(BackEndException b)
+    {
+      FAIL() << "should not throw a BackEndException";
+    }
+    catch(...)
+    {
+      FAIL() << "Wrong type of exception";
+    }
+  FAIL() << "Expected exception not thrown";
+}
+
+TEST(RPC_EXCEPTION_TEST, IN_PROCESS_NOT_SUBSCRIBED)
+{
+    BackEnd b(basic_protocol::SOURCE_RELAY , basic_protocol::TARGET_MARSHALL);
+    b.pool_size(1);
+
+    ServiceBase::shp s(new test_service_one<test_service_one_impl>());
+    b.register_and_init_service(s);
+    b.start();
+    InProcessInvoker ipi(b);  
+    
+    BPC bpc(ipi);
+
+    // HACK!!!! forcing a server (1) and request(0) ordinal
+    // i am not really sending a hello message... i am sending
+    // a call to dummy rpc which should be unsubscribed
+    bpc.set_service_ordinal(1);
+    bpc.remap_ordinals(m_method_map);
+
+    try 
+    {
+      basic_protocol::HelloRequest hreq;
+      basic_protocol::HelloResponse hres;
+
+      bpc.hello(hreq, hres); 
+    }
+    catch(InvokerException ie)
+    {
+      boost::system::error_code * e = boost::get_error_info<rbl_invoker_error_code>(ie);
+      
+      EXPECT_EQ(e->value(), basic_protocol::REQUEST_NOT_SUBSCRIBED);
+      return;
+    }
+    catch(BackEndException b)
+    {
+      FAIL() << "should not throw a BackEndException";
+    }
+    catch(...)
+    {
+      FAIL() << "Wrong type of exception";
+    }
+  FAIL() << "Expected exception not thrown";
+}
+
+TEST(RPC_EXCEPTION_TEST, TCP_PROCESS_NOT_SUBSCRIBED)
+{
+    BackEnd b(basic_protocol::SOURCE_RELAY , basic_protocol::TARGET_MARSHALL);
+    b.pool_size(1);
+
+    ServiceBase::shp s(new test_service_one<test_service_one_impl>());
+    b.register_and_init_service(s);
+    b.start();
+
+    TcpFrontEnd tfe(b,5555);
+    TcpInvoker ti("127.0.0.1", 5555);
+    tfe.start();
+
+    BPC bpc(ti);
+
+    // HACK!!!! forcing a server (1) and request(0) ordinal
+    // i am not really sending a hello message... i am sending
+    // a call to dummy rpc which should be unsubscribed
+    bpc.set_service_ordinal(1);
+    bpc.remap_ordinals(m_method_map);
+
+    try 
+    {
+      basic_protocol::HelloRequest hreq;
+      basic_protocol::HelloResponse hres;
+
+      bpc.hello(hreq, hres); 
+    }
+    catch(InvokerException ie)
+    {
+      boost::system::error_code * e = boost::get_error_info<rbl_invoker_error_code>(ie);
+      
+      EXPECT_EQ(e->value(), basic_protocol::REQUEST_NOT_SUBSCRIBED);
+      return;
+    }
+    catch(BackEndException b)
+    {
+      FAIL() << "should not throw a BackEndException";
+    }
+    catch(...)
+    {
+      FAIL() << "Wrong type of exception";
+    }
+  FAIL() << "Expected exception not thrown";
+}
 
 
 #ifdef ISOLATED_GTEST_COMPILE
