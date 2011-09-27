@@ -111,10 +111,28 @@ TEST(RPC_EXCEPTION_TEST, TCP_NOT_ACCEPTING)
   FAIL() << "Expected exception not thrown";
 }
 
+// bypassing encapsulation for testing purposes
+class BPC : public basic_protocol::basic_protocol_client
+{
+public:
+  BPC(InvokerBase & invoker)
+    :  basic_protocol::basic_protocol_client(invoker) {}
+  
+  void remap_ordinals(t_service_method_map & m_in)
+  {
+    basic_protocol::basic_protocol_client::remap_ordinals(m_in);
+  }
+  void set_service_ordinal(boost::uint16_t ordinal)
+  {
+    basic_protocol::basic_protocol_client::set_service_ordinal(ordinal);
+  }
+
+};
+
+BasicProtocolMethodMap m_method_map;
+
 TEST(RPC_EXCEPTION_TEST, IN_PROCESS_NOT_ESTABLISHED)
 {
-/*
-  {
     BackEnd b(basic_protocol::SOURCE_RELAY , basic_protocol::TARGET_MARSHALL);
     b.pool_size(1);
 
@@ -123,24 +141,24 @@ TEST(RPC_EXCEPTION_TEST, IN_PROCESS_NOT_ESTABLISHED)
     b.start();
     InProcessInvoker ipi(b);  
     
+    BPC bpc(ipi);
+
+    bpc.set_service_ordinal(0);
+    bpc.remap_ordinals(m_method_map);
+
     try 
     {
-      ipi.client_data()->request().set_service_ordinal(0);
-      ipi.client_data()->request().set_request_ordinal(1);
-
       basic_protocol::ListServicesRequest lreq;
-      lreq.SerializeToString( ipi.clent_data()->request()->
-      
-
       basic_protocol::ListServicesResponse lres;
     
-        
+      bpc.list_services(lreq,lres);
     }
     catch(InvokerException ie)
     {
       boost::system::error_code * e = boost::get_error_info<rbl_invoker_error_code>(ie);
       
       EXPECT_EQ(e->value(), basic_protocol::REQUEST_CLIENT_NOT_ESTABLISHED);
+      return;
     }
     catch(BackEndException b)
     {
@@ -150,32 +168,51 @@ TEST(RPC_EXCEPTION_TEST, IN_PROCESS_NOT_ESTABLISHED)
     {
       FAIL() << "Wrong type of exception";
     }
-  }
-  
-  {
+  FAIL() << "Expected exception not thrown";
+}
+
+
+TEST(RPC_EXCEPTION_TEST, TCP_PROCESS_NOT_ESTABLISHED)
+{
     BackEnd b(basic_protocol::SOURCE_RELAY , basic_protocol::TARGET_MARSHALL);
     b.pool_size(1);
 
     ServiceBase::shp s(new test_service_one<test_service_one_impl>());
     b.register_and_init_service(s);
     b.start();
-    InProcessInvoker ipi(b);  
-     
-    basic_protocol::HelloRequest hreq;
-    basic_protocol::HelloResponse hres;
+    
+    TcpFrontEnd tfe(b,5555);
+    TcpInvoker ti("127.0.0.1", 5555);
+    tfe.start();
 
-    hreq.set_source_type(basic_protocol::SOURCE_RELAY);
-    hreq.set_expected_target(basic_protocol::TARGET_MARSHALL);
-    hreq.set_node_name("test_client");
-  
-    ipi.client_data()->request().set_service_ordinal(0);
-    ipi.client_data()->request().set_request_ordinal(0);
+    BPC bpc(ti);
 
-    basic_protocol::ListServicesRequest lreq;
-    basic_protocol::ListServicesResponse lres;
+    bpc.set_service_ordinal(0);
+    bpc.remap_ordinals(m_method_map);
+
+    try 
+    {
+      basic_protocol::ListServicesRequest lreq;
+      basic_protocol::ListServicesResponse lres;
+    
+      bpc.list_services(lreq,lres);
+    }
+    catch(InvokerException ie)
+    {
+      boost::system::error_code * e = boost::get_error_info<rbl_invoker_error_code>(ie);
       
-  }
-  */
+      EXPECT_EQ(e->value(), basic_protocol::REQUEST_CLIENT_NOT_ESTABLISHED);
+      return;
+    }
+    catch(BackEndException b)
+    {
+      FAIL() << "should not throw a BackEndException";
+    }
+    catch(...)
+    {
+      FAIL() << "Wrong type of exception";
+    }
+  FAIL() << "Expected exception not thrown";
 }
 
 
