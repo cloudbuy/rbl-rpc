@@ -215,6 +215,90 @@ TEST(RPC_EXCEPTION_TEST, TCP_PROCESS_NOT_ESTABLISHED)
   FAIL() << "Expected exception not thrown";
 }
 
+TEST(RPC_EXCEPTION_TEST, IN_PROCESS_NO_SERVICE_WITH_ORDINAL)
+{
+    BackEnd b(basic_protocol::SOURCE_RELAY , basic_protocol::TARGET_MARSHALL);
+    b.pool_size(1);
+
+    ServiceBase::shp s(new test_service_one<test_service_one_impl>());
+    b.register_and_init_service(s);
+    b.start();
+    InProcessInvoker ipi(b);  
+    
+    BPC bpc(ipi);
+
+    bpc.set_service_ordinal(100);
+    bpc.remap_ordinals(m_method_map);
+
+    try 
+    {
+      basic_protocol::ListServicesRequest lreq;
+      basic_protocol::ListServicesResponse lres;
+    
+      bpc.list_services(lreq,lres);
+    }
+    catch(InvokerException ie)
+    {
+      boost::system::error_code * e = boost::get_error_info<rbl_invoker_error_code>(ie);
+      
+      EXPECT_EQ(e->value(), basic_protocol::REQUEST_NO_SERVICE_WITH_ORDINAL);
+      return;
+    }
+    catch(BackEndException b)
+    {
+      FAIL() << "should not throw a BackEndException";
+    }
+    catch(...)
+    {
+      FAIL() << "Wrong type of exception";
+    }
+  FAIL() << "Expected exception not thrown";
+}
+
+TEST(RPC_EXCEPTION_TEST, TCP_PROCESS_NO_SERVICE_WITH_ORDINAL)
+{
+    BackEnd b(basic_protocol::SOURCE_RELAY , basic_protocol::TARGET_MARSHALL);
+    b.pool_size(1);
+
+    ServiceBase::shp s(new test_service_one<test_service_one_impl>());
+    b.register_and_init_service(s);
+    b.start();
+    
+    TcpFrontEnd tfe(b,5555);
+    TcpInvoker ti("127.0.0.1", 5555);
+    tfe.start();
+
+    BPC bpc(ti);
+
+    bpc.set_service_ordinal(100);
+    bpc.remap_ordinals(m_method_map);
+
+    try 
+    {
+      basic_protocol::ListServicesRequest lreq;
+      basic_protocol::ListServicesResponse lres;
+    
+      bpc.list_services(lreq,lres);
+    }
+    catch(InvokerException ie)
+    {
+      boost::system::error_code * e = boost::get_error_info<rbl_invoker_error_code>(ie);
+      
+      EXPECT_EQ(e->value(), basic_protocol::REQUEST_NO_SERVICE_WITH_ORDINAL);
+      return;
+    }
+    catch(BackEndException b)
+    {
+      FAIL() << "should not throw a BackEndException";
+    }
+    catch(...)
+    {
+      FAIL() << "Wrong type of exception";
+    }
+  FAIL() << "Expected exception not thrown";
+}
+
+
 
 #ifdef ISOLATED_GTEST_COMPILE
 int main(int argc,char ** argv)
