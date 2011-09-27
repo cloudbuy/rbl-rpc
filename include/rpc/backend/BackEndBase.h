@@ -344,7 +344,17 @@ namespace rubble { namespace rpc {
         end_rpc(client_data.get());
         return true;
       }
+    } 
+    else if( ! client_data->is_client_established() )// client must be established
+    {
+      client_data->error_code().assign(
+        error_codes::RBL_BACKEND_NOT_ESTABLISHED,
+        rpc_backend_error);
+      client_data->response().set_error(basic_protocol::REQUEST_CLIENT_NOT_ESTABLISHED);
+      end_rpc(client_data.get());
+      return true; 
     }
+    
 //    std::cout << (*service)->name() << "::" << request.request_ordinal() << std::endl; 
     m_io_service.post(boost::bind(&Invoker::operator(),boost::ref(i)));
     i.after_post();

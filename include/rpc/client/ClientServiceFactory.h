@@ -55,6 +55,7 @@ public:
     hreq.set_node_name(m_name);
   
     bpc->hello(hreq, hres); 
+    // TODO change to invoker exception
     if( hres.error_type() != basic_protocol::NO_HELLO_ERRORS)
       throw BackEndException();
 
