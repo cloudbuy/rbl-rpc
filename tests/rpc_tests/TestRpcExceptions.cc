@@ -130,7 +130,6 @@ public:
   {
     basic_protocol::basic_protocol_client::set_service_ordinal(ordinal);
   }
-
 };
 
 BasicProtocolMethodMap m_method_map;
@@ -469,6 +468,165 @@ TEST(RPC_EXCEPTION_TEST, TCP_PROCESS_NOT_SUBSCRIBED)
       boost::system::error_code * e = boost::get_error_info<rbl_invoker_error_code>(ie);
       
       EXPECT_EQ(e->value(), basic_protocol::REQUEST_NOT_SUBSCRIBED);
+      return;
+    }
+    catch(BackEndException b)
+    {
+      FAIL() << "should not throw a BackEndException";
+    }
+    catch(...)
+    {
+      FAIL() << "Wrong type of exception";
+    }
+  FAIL() << "Expected exception not thrown";
+}
+
+class SerErrInProcessInvoker : public InProcessInvoker
+{
+public:
+  SerErrInProcessInvoker(BackEnd & b_in)
+    : InProcessInvoker(b_in) {}
+   
+  bool invoker()
+  {
+    request().set_request_string("trash");
+    return m_backend.invoke(*this);
+  } 
+};
+
+class SerErrTcpInvoker : public TcpInvoker
+{
+public:
+  SerErrTcpInvoker(const std::string & str, short port)
+    : TcpInvoker(str,port) {} 
+  
+  bool invoke()
+  {
+      boost::uint32_t flag_return;
+      boost::uint32_t msg_size_return=0;
+
+      boost::uint32_t msg_size = 8 + request().ByteSize();
+      
+      if(msg_size > m_buffer.size() )
+        m_buffer.resize(msg_size);
+      
+      google::protobuf::io::ArrayOutputStream aos(m_buffer.get(),m_buffer.size());
+      google::protobuf::io::CodedOutputStream cos(&aos);
+      
+      cos.WriteLittleEndian32(0); // FOR RPC FLAGS -- UNUSED ATM
+      cos.WriteLittleEndian32(msg_size);
+      request().set_request_string("trash");
+      request().SerializeToCodedStream(&cos);
+
+      std::size_t transfered_count = 
+        boost::asio::write(m_socket, 
+          boost::asio::buffer(m_buffer.get(), msg_size),m_error_code);
+
+      if(!m_error_code)
+      {
+        boost::asio::read(m_socket, boost::asio::buffer(m_buffer.get(), 8),m_error_code);
+        if(!m_error_code)
+        {
+          google::protobuf::io::CodedInputStream cis(m_buffer.get(),m_buffer.size());
+          
+          cis.ReadLittleEndian32( & flag_return);
+          cis.ReadLittleEndian32( & msg_size_return);
+          
+          if(msg_size_return > m_buffer.size())
+            m_buffer.resize(msg_size_return);
+          
+          transfered_count = boost::asio::read(m_socket, 
+            boost::asio::buffer(m_buffer.get(), msg_size_return-8),m_error_code);
+          if(!m_error_code)
+          {
+            google::protobuf::io::CodedInputStream cis2(m_buffer.get(),m_buffer.size());
+
+            response().ParseFromCodedStream(&cis2);
+             
+          }
+          else
+            std::cout << "error" << std::endl;
+        }
+        else
+          std::cout << "error" << std::endl;
+      }
+      else
+        std::cout << "error" << std::endl;
+      return false;
+  }
+
+};
+
+TEST(RPC_EXCEPTION_TEST, IN_PROCESS_REMOTE_SERIALIZATION_ERROR)
+{
+    BackEnd b(basic_protocol::SOURCE_RELAY , basic_protocol::TARGET_MARSHALL);
+    b.pool_size(1);
+
+    ServiceBase::shp s(new test_service_one<test_service_one_impl>());
+    b.register_and_init_service(s);
+    b.start();
+    SerErrInProcessInvoker ipi(b);  
+    
+    BPC bpc(ipi);
+
+    bpc.set_service_ordinal(0);
+    bpc.remap_ordinals(m_method_map);
+
+    try 
+    {
+      basic_protocol::HelloRequest hreq;
+      basic_protocol::HelloResponse hres;
+
+      bpc.hello(hreq, hres); 
+    }
+    catch(InvokerException ie)
+    {
+      boost::system::error_code * e = boost::get_error_info<rbl_invoker_error_code>(ie);
+      
+      EXPECT_EQ(e->value(), basic_protocol::REQUEST_STRING_PARSE_ERROR);
+      return;
+    }
+    catch(BackEndException b)
+    {
+      FAIL() << "should not throw a BackEndException";
+    }
+    catch(...)
+    {
+      FAIL() << "Wrong type of exception";
+    }
+  FAIL() << "Expected exception not thrown";
+}
+
+TEST(RPC_EXCEPTION_TEST, TCP_PROCESS_REMOTE_SERIALIZATION_ERROR)
+{
+    BackEnd b(basic_protocol::SOURCE_RELAY , basic_protocol::TARGET_MARSHALL);
+    b.pool_size(1);
+
+    ServiceBase::shp s(new test_service_one<test_service_one_impl>());
+    b.register_and_init_service(s);
+    b.start();
+
+    TcpFrontEnd tfe(b,5555);
+    SerErrTcpInvoker ti("127.0.0.1", 5555);
+    tfe.start();
+
+    BPC bpc(ti);
+
+    bpc.set_service_ordinal(0);
+    bpc.remap_ordinals(m_method_map);
+
+    try 
+    {
+      basic_protocol::HelloRequest hreq;
+      basic_protocol::HelloResponse hres;
+
+      bpc.hello(hreq, hres); 
+    }
+    catch(InvokerException ie)
+    {
+      boost::system::error_code * e = boost::get_error_info<rbl_invoker_error_code>(ie);
+      
+      EXPECT_EQ(e->value(), basic_protocol::REQUEST_STRING_PARSE_ERROR);
       return;
     }
     catch(BackEndException b)

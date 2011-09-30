@@ -36,6 +36,8 @@ namespace rubble { namespace rpc {
         "RPC SHOULD NOT BE SET WHEN RESETING AN OBJECT FOR RPC");
     }
 
+    // TestRpcException.cc mirrors this method in order to inject errors.
+    // Any changes to this method must be mirrored there as well.
     // TODO fix the error handling (bool return)
     bool invoke()
     {
