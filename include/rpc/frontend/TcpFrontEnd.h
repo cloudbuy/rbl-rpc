@@ -38,26 +38,15 @@ class FrontEndException
     ~TcpFrontEndConnectionInvoker();
 
     bool is_useable();
-
     void reset();
-
-
     void operator() ();
-
     void after_post();
-
     bool invoke();
-
-
     void handle_error(const boost::system::error_code & error, const char * method_name);
-
     void handle_read_header(  std::size_t bytes_sent, const boost::system::error_code & error);
-    
     void handle_read_body(   std::size_t bytes_sent,
                             const boost::system::error_code & error);
-    
     void handle_write_response();
-    
     void handle_reset_for_next_request( std::size_t bytes_sent,
                                         const boost::system::error_code & error);
 

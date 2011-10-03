@@ -818,6 +818,13 @@ TEST_F(ListMethodTest, basic_protocol_messages)
   basic_protocol::ListMethodsRequest req;
   basic_protocol::ListMethodsResponse res;
 
+  set_client_source(basic_protocol::SOURCE_RELAY);
+  set_client_destination(basic_protocol::TARGET_MARSHALL);
+
+  hello_invoke();
+  
+  
+
   req.set_service_ordinal(0);
 
   invoker.reset();
@@ -830,7 +837,7 @@ TEST_F(ListMethodTest, basic_protocol_messages)
   b.invoke(invoker);
   res.ParseFromString(invoker.client_data()->response().response_string());
 
-  EXPECT_TRUE(res.methods_size() >= 5);
+  EXPECT_EQ(res.methods_size(), 5);
   EXPECT_EQ( res.error(), 0);
   EXPECT_EQ( res.methods(0).service_name(),"hello" );
   EXPECT_EQ( res.methods(1).service_name(),"list_services"); 
@@ -1007,7 +1014,21 @@ TEST(invoker_backend_register_tests, backend_invoker_active_rpc)
   EXPECT_EQ(b->client_count(), 0);
   InProcessInvoker::shptr inv(new InProcessInvoker(*b));
 
+  basic_protocol::HelloRequest hello;
+  basic_protocol::HelloResponse hres;
+  
+  hello.set_source_type( basic_protocol::SOURCE_RELAY);
+  hello.set_expected_target( basic_protocol::TARGET_MARSHALL); 
+  hello.set_node_name("test_client");
+
   inv->reset();  
+  inv->client_data()->request().Clear(); 
+  inv->client_data()->request().set_service_ordinal(0);
+  inv->client_data()->request().set_request_ordinal(0);
+  hello.SerializeToString(inv->client_data()->request().mutable_request_string());
+  b->invoke(*inv);
+  inv->reset();  
+
   sreq.set_service_ordinal(1);
 
   inv->client_data()->request().Clear();
@@ -1036,6 +1057,13 @@ TEST(invoker_backend_register_tests, backend_invoker_active_rpc)
 
   // second call start 
   InProcessInvoker::shptr inv2(new InProcessInvoker(*b));
+  inv2->reset();  
+  inv2->client_data()->request().Clear(); 
+  inv2->client_data()->request().set_service_ordinal(0);
+  inv2->client_data()->request().set_request_ordinal(0);
+  hello.SerializeToString(inv2->client_data()->request().mutable_request_string());
+  b->invoke(*inv2);
+  inv2->reset();  
 
 
   inv2->reset();  
