@@ -1,4 +1,5 @@
 #ifndef RBL_COMMON_H
+#define RBL_COMMON_H
 
 #include <string>
 #include <vector>

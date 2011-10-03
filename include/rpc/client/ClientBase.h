@@ -1,7 +1,7 @@
 #ifndef RBL_RPC_CLIENT_BASE_H
 #define RBL_RPC_CLIENT_BASE_H
 #include <rpc/invoker/InvokerBase.h>
-
+#include <common/common.h>
 #include <boost/scoped_ptr.hpp>
 #include <boost/shared_ptr.hpp>
 
@@ -15,7 +15,8 @@ namespace rpc {
     typedef boost::scoped_ptr<ClientServiceBase> scptr;
     typedef boost::shared_ptr<ClientServiceBase> shptr;
 
-    typedef common::OidContainer<common::Oid, boost::uint16_t> t_service_method_map;
+    typedef rubble::common::OidContainer<
+      rubble::common::Oid, boost::uint16_t> t_service_method_map;
 
     ClientServiceBase(InvokerBase & invoker, boost::uint16_t method_count)
       : m_invoker(invoker),

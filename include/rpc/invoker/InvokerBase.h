@@ -2,6 +2,7 @@
 #define RBL_RPC_INVOKER_BASE
 #include <boost/shared_ptr.hpp>
 #include <boost/signals/connection.hpp>
+#include <rpc/client/ClientBase.h>
 
 namespace rubble { namespace rpc {
   class BackEnd;
