@@ -22,7 +22,7 @@ message ClientRequest
 enum ClientResponseErrorType
 {
   REQUEST_SUCCESS = 0;
-  NOT_ACCEPTING_REQUESTS=1;
+  REQUEST_BACKEND_NOT_ACCEPTING_REQUESTS=1;
 
   // error codes detected in the backend's invoke body
   REQUEST_CLIENT_NOT_ESTABLISHED=2;

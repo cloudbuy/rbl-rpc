@@ -276,7 +276,8 @@ namespace rubble { namespace rpc {
     {
       client_data->error_code().assign(                                         
         error_codes::RBL_BACKEND_NOT_ACCEPTING_REQUESTS, rpc_backend_error);    
-      client_data->response().set_error(basic_protocol::NOT_ACCEPTING_REQUESTS);
+      client_data->response().set_error(
+        basic_protocol::REQUEST_BACKEND_NOT_ACCEPTING_REQUESTS);
       return true;                                                                   
     } 
 

@@ -56,7 +56,7 @@ TEST(RPC_EXCEPTION_TEST, IN_PROCESS_NOT_ACCEPTING)
   {
     boost::system::error_code * e = boost::get_error_info<rbl_invoker_error_code>(ie);
     
-    EXPECT_EQ(e->value(), basic_protocol::NOT_ACCEPTING_REQUESTS);
+    EXPECT_EQ(e->value(), basic_protocol::REQUEST_BACKEND_NOT_ACCEPTING_REQUESTS);
     return;
   }
   catch(BackEndException b)
@@ -100,7 +100,7 @@ TEST(RPC_EXCEPTION_TEST, TCP_NOT_ACCEPTING)
   {
     boost::system::error_code * e = boost::get_error_info<rbl_invoker_error_code>(ie);
     
-    EXPECT_EQ(e->value(), basic_protocol::NOT_ACCEPTING_REQUESTS);
+    EXPECT_EQ(e->value(), basic_protocol::REQUEST_BACKEND_NOT_ACCEPTING_REQUESTS);
     return;
   }
   catch(BackEndException b)
