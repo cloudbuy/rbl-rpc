@@ -914,7 +914,6 @@ TEST_F(NotAcceptingTests, after_shutdown_test)
   
   EXPECT_EQ(invoker.client_data()->response().error(), basic_protocol::REQUEST_BACKEND_NOT_ACCEPTING_REQUESTS);
   EXPECT_EQ(invoker.client_data()->error_code().value(), error_codes::RBL_BACKEND_NOT_ACCEPTING_REQUESTS);
-  EXPECT_FALSE(b.is_useable());
 }
 
 #ifdef ISOLATED_GTEST_COMPILE

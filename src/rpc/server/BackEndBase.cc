@@ -67,7 +67,7 @@ namespace rubble { namespace rpc {
   // is_useable ///////////////////////////////////////////////////////////////
   bool BackEnd::is_useable()
   {
-    return (m_is_sealed && m_synchronised_state.is_accepting_requests());
+    return (m_is_sealed);
   }
   //-------------------------------------------------------------------------//
 
