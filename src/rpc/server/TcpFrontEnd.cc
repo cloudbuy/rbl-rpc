@@ -3,7 +3,8 @@
 namespace rubble {
 namespace rpc {
 // class TcpFrontEndConnectionInvoker /////////////////////////////////////////
-   TcpFrontEndConnectionInvoker::TcpFrontEndConnectionInvoker(
+  // TcpFrontEndConnectionInvoker /////////////////////////////////////////////
+  TcpFrontEndConnectionInvoker::TcpFrontEndConnectionInvoker(
     SharedSocket s_in,TcpFrontEnd & tfe)
     : socket(s_in),
       io_state(IO_READ_HEADER_WAIT_REQUEST_START_INACTIVE),
@@ -12,42 +13,56 @@ namespace rpc {
   {
     tcp_front_end.backend().connect(m_client_data);
   }
+  //-------------------------------------------------------------------------//
 
+  // ~TcpFrontEndConnectionInvoker ////////////////////////////////////////////
   TcpFrontEndConnectionInvoker::~TcpFrontEndConnectionInvoker()
   {
     tcp_front_end.backend().disconect(m_client_data); 
   }
+  //-------------------------------------------------------------------------//
+
+  // is_useable ///////////////////////////////////////////////////////////////
   bool TcpFrontEndConnectionInvoker::is_useable()
   {
     return tcp_front_end.backend().is_useable();
   }
+  //-------------------------------------------------------------------------//  
 
+  // reset ////////////////////////////////////////////////////////////////////
   void TcpFrontEndConnectionInvoker::reset()
   {  
     m_client_data->request().Clear();
     m_client_data->response().Clear();
     m_client_data->error_code().clear();
   }
+  //-------------------------------------------------------------------------//
 
-
+  // operator() ///////////////////////////////////////////////////////////////
   void TcpFrontEndConnectionInvoker::operator() ()  
   {
     service->dispatch(*client_cookie, * m_client_data);
     tcp_front_end.backend().end_rpc(m_client_data.get());
     handle_write_response();  
   };
+  //-------------------------------------------------------------------------//
 
+  // after_post ///////////////////////////////////////////////////////////////
   void TcpFrontEndConnectionInvoker::after_post()   
   {
   }
+  /////////////////////////////////////////////////////////////////////////////
 
+  // invoke ///////////////////////////////////////////////////////////////////
   bool TcpFrontEndConnectionInvoker::invoke()       
   {
     return tcp_front_end.backend().invoke(*this);
   };
-
-
-  void TcpFrontEndConnectionInvoker::handle_error(const boost::system::error_code & error, const char * method_name)
+  //-------------------------------------------------------------------------//
+  
+  // handle_error /////////////////////////////////////////////////////////////
+  void TcpFrontEndConnectionInvoker::handle_error(
+    const boost::system::error_code & error, const char * method_name )
   {
     if(error.category() == boost::asio::error::get_misc_category() )
     {
@@ -65,12 +80,15 @@ namespace rpc {
     }
     else
     {
-     std::cout << "error in " << method_name << ": " << error.category().name() 
+     std::cout << "error in " << method_name << ": " << error.category().name()
       << " " << error.value() << " : "<< error.message() << std::endl;
     }
   }
+  //-------------------------------------------------------------------------//
 
-  void TcpFrontEndConnectionInvoker::handle_read_header(  std::size_t bytes_sent, const boost::system::error_code & error)
+  // handle_read_heeader //////////////////////////////////////////////////////
+  void TcpFrontEndConnectionInvoker::handle_read_header(  
+    std::size_t bytes_sent, const boost::system::error_code & error)
   {
  
     if(!error)
@@ -85,18 +103,23 @@ namespace rpc {
             buffer->resize(msg_sz);
 
       io_state = IO_READ_BODY_REQUEST_ACTIVE;
-      boost::asio::async_read(  *socket.get(), 
-                                    boost::asio::buffer( buffer->get(), ( msg_sz -8)),
-                                    boost::bind(&TcpFrontEndConnectionInvoker::handle_read_body, 
-                                      this, 
-                                      boost::asio::placeholders::bytes_transferred,
-                                      boost::asio::placeholders::error));
+      boost::asio::async_read(  
+        *socket.get(), 
+        boost::asio::buffer( buffer->get(), ( msg_sz -8)),
+        boost::bind(&TcpFrontEndConnectionInvoker::handle_read_body, 
+          this, 
+          boost::asio::placeholders::bytes_transferred,
+          boost::asio::placeholders::error
+        )
+      );
     }
     else handle_error(error, "handle_read_header");
   }
+  //-------------------------------------------------------------------------//
 
-  void TcpFrontEndConnectionInvoker::handle_read_body(   std::size_t bytes_sent,
-                          const boost::system::error_code & error)
+  // handle_read_body /////////////////////////////////////////////////////////
+  void TcpFrontEndConnectionInvoker::handle_read_body(
+    std::size_t bytes_sent, const boost::system::error_code & error)
   {
 
     if(!error)
@@ -109,7 +132,9 @@ namespace rpc {
     }
     else handle_error(error,"handled_read_body");
   }
-
+  //-------------------------------------------------------------------------//
+  
+  // handle_write_response ////////////////////////////////////////////////////
   void TcpFrontEndConnectionInvoker::handle_write_response()
   {
     io_state = IO_REQUEST_RESPONSE_WRITE_ACTIVE;
@@ -139,30 +164,35 @@ namespace rpc {
                     boost::asio::placeholders::error)
     );
   }
-  
-  void TcpFrontEndConnectionInvoker::handle_reset_for_next_request( std::size_t bytes_sent,
-                                      const boost::system::error_code & error)
+  //-------------------------------------------------------------------------//
+
+  // handle_reset_for_next_request ////////////////////////////////////////////
+  void TcpFrontEndConnectionInvoker::handle_reset_for_next_request
+    ( std::size_t bytes_sent, const boost::system::error_code & error)
   {
     if(!error)
     {
-    io_state = IO_READ_HEADER_WAIT_REQUEST_START_INACTIVE; 
+      io_state = IO_READ_HEADER_WAIT_REQUEST_START_INACTIVE; 
 
-    boost::asio::async_read(  *socket.get(),
-                                  boost::asio::buffer ( buffer->get(), 8 ),
-                                  boost::bind ( 
-                                    &TcpFrontEndConnectionInvoker::handle_read_header, 
-                                    this,
-                                    boost::asio::placeholders::bytes_transferred,
-                                    boost::asio::placeholders::error 
-                                  ) 
-                                );
+      boost::asio::async_read(  
+        *socket.get(),
+        boost::asio::buffer ( buffer->get(), 8 ),
+        boost::bind ( 
+          &TcpFrontEndConnectionInvoker::handle_read_header, 
+          this,
+          boost::asio::placeholders::bytes_transferred,
+          boost::asio::placeholders::error 
+        ) 
+      );
 
     }
     else handle_error(error,"handle_reset_for_next_request");
   }
+  //-------------------------------------------------------------------------//
 //---------------------------------------------------------------------------//
  
 // class TcpFrontEnd //////////////////////////////////////////////////////////
+  // TcpFrontEnd //////////////////////////////////////////////////////////////
   TcpFrontEnd::TcpFrontEnd(BackEnd & b_in, short port)
     : m_io_service(),
       m_backend(b_in),
@@ -172,24 +202,34 @@ namespace rpc {
       m_started(false),
       m_rpc_count(0),
       m_accepting_requests(false)
-    {
-      connect_invoker_manager();
-    }
+  {
+    connect_invoker_manager();
+  }
+  //-------------------------------------------------------------------------//
 
+  // ~TcpFrontend /////////////////////////////////////////////////////////////
   TcpFrontEnd::~TcpFrontEnd()
   {
     terminate_invoker_manager();
     stop();
   }
+  //-------------------------------------------------------------------------//
+
+  // connect_invoker_manager //////////////////////////////////////////////////
   void TcpFrontEnd::connect_invoker_manager()
   {
 //    m_backend.connect_invoker_manager(BackEndInvokerManager::shptr(this));
   }
+  //-------------------------------------------------------------------------//
+
+  // terminate_invoker_manager ////////////////////////////////////////////////
   void TcpFrontEnd::terminate_invoker_manager()
   {
   
   }
-
+  //-------------------------------------------------------------------------//
+  
+  // start ////////////////////////////////////////////////////////////////////
   void TcpFrontEnd::start()
   {
     if( ! m_started )
@@ -199,26 +239,32 @@ namespace rpc {
       else
       {
         start_accept();
-        m_thread = boost::thread( boost::bind(&boost::asio::io_service::run, &m_io_service) ); 
+        m_thread = boost::thread( boost::bind(  &boost::asio::io_service::run,
+                                                &m_io_service) ); 
         m_started = true;
       }
     }
     else 
       throw FrontEndException();
   }
+  //-------------------------------------------------------------------------//
 
+  // stop /////////////////////////////////////////////////////////////////////
   void TcpFrontEnd::stop()
   {
     m_io_service.stop();
     join();
   } 
- 
+  //-------------------------------------------------------------------------//
+
+  // join /////////////////////////////////////////////////////////////////////
   void TcpFrontEnd::join()
   { 
     m_thread.join();
   }
+  //-------------------------------------------------------------------------//
 
-
+  // handle_accept ////////////////////////////////////////////////////////////
   void TcpFrontEnd::handle_accept(  SharedSocket socket, 
                                     const boost::system::error_code & error)
   {
@@ -247,7 +293,9 @@ namespace rpc {
     }
     start_accept();
   }
+  //-------------------------------------------------------------------------//
   
+  // start_accept /////////////////////////////////////////////////////////////
   void TcpFrontEnd::start_accept()
   {
     SharedSocket socket(new boost::asio::ip::tcp::socket(m_io_service) );
@@ -258,5 +306,6 @@ namespace rpc {
         socket,boost::asio::placeholders::error));
     
   }
+  //-------------------------------------------------------------------------//
 //---------------------------------------------------------------------------//
 } }
