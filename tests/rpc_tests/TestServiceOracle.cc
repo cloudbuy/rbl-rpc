@@ -51,7 +51,10 @@ using namespace rubble::rpc::test_proto;
   public:
     typedef ClientCookieBase t_client_cookie;
     void init(boost::system::error_code & ec) { ec.clear(); }
-    void teardown(boost::system::error_code & ec) { ec.assign(1,rpc_backend_error); }
+    void teardown(boost::system::error_code & ec) 
+    { 
+      ec.assign(1,rpc_backend_error); 
+    }
     void subscribe(ClientCookie & client_cookie, ClientData & cd,
       std::string *, std::string *) {}
     void unsubscribe(ClientCookie & client_cookie, ClientData & cd) {}
@@ -100,10 +103,13 @@ TEST(backed_tests,teardown_no_fail)
   ServiceBase::shp s(new test_service_one<test_service_one_dest_no_fail>());
   b.register_and_init_service(s);
 
-  
+  std::cout << "here" << std::endl;
   b.pool_size(1);
   b.start();
+  std::cout << "here" << std::endl;
+
   ASSERT_NO_THROW(b.shutdown());
+  std::cout << "here" << std::endl;
 }
 
 TEST(backed_tests,teardown_fail)
@@ -111,10 +117,12 @@ TEST(backed_tests,teardown_fail)
   BackEnd b(basic_protocol::SOURCE_RELAY,basic_protocol::TARGET_MARSHALL);
   ServiceBase::shp s(new test_service_one<test_service_one_dest_fail>());
   b.register_and_init_service(s);
-  
   b.pool_size(1);
   b.start();
+  
+  std::cout << " giranimo" << std::endl; 
   ASSERT_THROW(b.shutdown(),BackEndException);
+  std::cout << "after" << std::endl;
 }
 
 class HelloTest : public ::testing::Test
@@ -863,7 +871,7 @@ public:
   {
   } 
 
-  void hello_invoke()
+  void hello_invoke(bool wrapped_invoker = false)
   {
     set_client_source(basic_protocol::SOURCE_RELAY);
     set_client_destination(basic_protocol::TARGET_MARSHALL);
@@ -881,7 +889,10 @@ public:
     invoker.client_data()->request().set_service_ordinal(0);
     invoker.client_data()->request().set_request_ordinal(0);
     hello.SerializeToString(invoker.client_data()->request().mutable_request_string());
-    b.invoke(invoker);
+    if( wrapped_invoker)
+      invoker.invoke();
+    else
+      b.invoke(invoker);
   }  
   void set_client_source(basic_protocol::SourceConnectionType s_in)
     { source = s_in; }
@@ -906,7 +917,7 @@ TEST_F(NotAcceptingTests, before_backend_start)
   EXPECT_FALSE(b.is_useable());
 }
 
-TEST_F(NotAcceptingTests, after_shutdown_test)
+TEST_F(NotAcceptingTests, after_shutdown_test_direct)
 {
   b.start();
   b.shutdown(); 
@@ -914,6 +925,12 @@ TEST_F(NotAcceptingTests, after_shutdown_test)
   
   EXPECT_EQ(invoker.client_data()->response().error(), basic_protocol::REQUEST_BACKEND_NOT_ACCEPTING_REQUESTS);
   EXPECT_EQ(invoker.client_data()->error_code().value(), error_codes::RBL_BACKEND_NOT_ACCEPTING_REQUESTS);
+}
+TEST_F(NotAcceptingTests, after_shutdown_test_wrapped)
+{
+  b.start();
+  b.shutdown(); 
+  ASSERT_THROW( hello_invoke(true), InvokerException );
 }
 
 #ifdef ISOLATED_GTEST_COMPILE
@@ -959,6 +976,7 @@ TEST(invoker_backend_register_tests, backend_invoker_disconect_test)
   InProcessInvoker::shptr inv2(new InProcessInvoker(*b));
   
   b.reset();
+  std::cout << "here" << std::endl;
   EXPECT_FALSE(inv->is_connected());
   EXPECT_FALSE(inv->is_connected());
 }

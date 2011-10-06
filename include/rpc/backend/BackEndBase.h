@@ -25,27 +25,61 @@
 namespace rubble { namespace rpc {
   enum BackEndShutdownState
   {
-    ACTIVE = 0,
-    // rpc has ended threads will be terminated on next call.
-    BACKEND_SHUTDOWN_WAITING_RPC_END,
-    // all invokers have had disconect called on them, certain clients
-    // are still connected. 
-    BACKEND_WAITING_ON_CLIENT_DISCONECTIONS,
+    BACKEND_ACTIVE = 0,
+    BACKEND_SHUTDOWN_INITIATED,
+    BACKEND_SHUTDOWN_WAITING_ON_ACTIVE_RPC_END,
+    BACKEND_SHUTDOWN_WAITING_ON_MANAGER_DISCONECTIONS,
     BACKEND_SHUTDOWN_COMPLETE
   };
-  
+
+// class SynchronisedSignalConnection //////////////////////////////////////////
+  class SynchronisedSignalConnection
+  {
+  public:
+    typedef std::auto_ptr<SynchronisedSignalConnection> aptr;
+
+    SynchronisedSignalConnection( boost::recursive_mutex & mutex ,  
+                                  boost::signals::connection & con)
+      :  m_connection(con),m_mutex(mutex) {}
+    
+    bool is_connected()
+    {
+      boost::lock_guard<boost::recursive_mutex> lock(m_mutex);
+      return m_connection.connected();
+    }
+
+    bool disconnect()
+    { 
+      boost::lock_guard<boost::recursive_mutex> lock(m_mutex);
+      
+      if( m_connection.connected() )
+      {
+        m_connection.disconnect();
+        return true;
+      }
+      else
+        return false;
+    }
+  private :
+    boost::signals::connection  m_connection;
+    boost::recursive_mutex &    m_mutex;
+  };
+//----------------------------------------------------------------------------//
+
+// class SynchronisedBackEndState //////////////////////////////////////////////
   class SynchronisedBackEndState
   {
   public:
     SynchronisedBackEndState()
       : m_active_rpc_count(0),
-        m_accepting_requests(false)
+        m_accepting_requests(false),
+        m_shutdown_state(BACKEND_ACTIVE)
     { 
     }
 
     bool start_a_request()
     {
-      boost::lock_guard<boost::mutex> lock (m_mutex);
+      boost::lock_guard<boost::recursive_mutex> lock (m_mutex);
   
       if(m_accepting_requests)
       {
@@ -58,61 +92,93 @@ namespace rubble { namespace rpc {
   
     boost::int32_t rpc_count()
     {
-      boost::lock_guard<boost::mutex> lock (m_mutex);
+      boost::lock_guard<boost::recursive_mutex> lock (m_mutex);
       return m_active_rpc_count;
     }
   
     void end_a_request()
     {
-      boost::lock_guard<boost::mutex> lock (m_mutex);
+      boost::lock_guard<boost::recursive_mutex> lock (m_mutex);
       m_active_rpc_count--;
     }
     
     void begin_accepting_requests()
     {
-      boost::lock_guard<boost::mutex> lock (m_mutex);
+      boost::lock_guard<boost::recursive_mutex> lock (m_mutex);
       m_accepting_requests = true;
     }
 
     void stop_accepting_requests()
     {
-      boost::lock_guard<boost::mutex> lock (m_mutex);
+      boost::lock_guard<boost::recursive_mutex> lock (m_mutex);
       m_accepting_requests = false;
     }
     
     bool is_accepting_requests()
     {
-      boost::lock_guard<boost::mutex> lock (m_mutex);
+      boost::lock_guard<boost::recursive_mutex> lock (m_mutex);
       return m_accepting_requests;
     }
 
     template<typename Manager>
-    boost::signals::connection register_invoker_manager(Manager & m)
+    SynchronisedSignalConnection::aptr  register_invoker_manager(Manager & m)
     {
-      boost::lock_guard<boost::mutex> lock (m_mutex);
+      boost::lock_guard<boost::recursive_mutex> lock (m_mutex);
       m.connect_to_backend();
-      return f_disc_invoker_sig.connect(
-        boost::bind( &Manager::disconect_from_backend, &m));
+      
+      boost::signals::connection con = f_disc_invoker_sig.connect(
+             boost::bind( &Manager::disconect_from_backend, &m));
+
+      return SynchronisedSignalConnection::aptr( 
+        new SynchronisedSignalConnection( 
+          m_mutex, con
+        )
+      );
     }
 
     std::size_t manager_count()
     {
-      boost::lock_guard<boost::mutex> lock (m_mutex);
+      boost::lock_guard<boost::recursive_mutex> lock (m_mutex);
       return f_disc_invoker_sig.num_slots();
     }
 
     void disconect_managers()
     {
-      boost::lock_guard<boost::mutex> lock (m_mutex);
+      boost::lock_guard<boost::recursive_mutex> lock (m_mutex);
+      
       f_disc_invoker_sig();
     }
+
+    bool check_and_initiate_shutdown()
+    {
+      boost::lock_guard<boost::recursive_mutex> lock (m_mutex);
+      if( m_shutdown_state ==  BACKEND_ACTIVE)
+      {
+        m_shutdown_state = BACKEND_SHUTDOWN_INITIATED;
+        return true;
+      }
+      else
+        return false;
+    }
+    void shutdown_state(BackEndShutdownState state)
+    {
+      m_shutdown_state = state;
+    }
+  
+    BackEndShutdownState shutdown_state()
+    {
+      return m_shutdown_state;
+    }
   private:
-    bool m_accepting_requests;
-    boost::int32_t m_active_rpc_count;
-    boost::mutex m_mutex;
+    bool                    m_accepting_requests;
+    boost::int32_t          m_active_rpc_count;
+    boost::recursive_mutex  m_mutex;
     boost::signal<void() >  f_disc_invoker_sig;
+    BackEndShutdownState    m_shutdown_state;
   };
- 
+//----------------------------------------------------------------------------//
+
+// class BackEnd /////////////////////////////////////////////////////////////// 
   class BackEnd : boost::noncopyable
   {
   public:
@@ -125,7 +191,6 @@ namespace rubble { namespace rpc {
 
     void pool_size(int pool_size_in) { m_pool_size = pool_size_in; }
     bool is_sealed() { return m_is_sealed; }
-    void seal() { m_is_sealed = true;}
    
     void pause_requests() { m_synchronised_state.stop_accepting_requests(); }
     void resume_requests() { m_synchronised_state.begin_accepting_requests(); } 
@@ -137,7 +202,7 @@ namespace rubble { namespace rpc {
     void register_and_init_service(ServiceBase::shp service);
     void block_till_termination();
 
-    void shutdown(int step_seconds =5);
+    void shutdown(int step_seconds = 5);
     BackEndShutdownState shutdown_step();
     
  
@@ -148,7 +213,7 @@ namespace rubble { namespace rpc {
     std::size_t client_count();
  
     template<typename Manager>
-    boost::signals::connection register_invoker_manager(Manager & m)
+    SynchronisedSignalConnection::aptr register_invoker_manager(Manager & m)
     {
       return m_synchronised_state.register_invoker_manager(m);
     }
@@ -189,9 +254,10 @@ namespace rubble { namespace rpc {
 
     boost::scoped_ptr<boost::asio::io_service::work>    m_work;
     
-    BackEndShutdownState                                m_shutdown_state;
-  };
+     };
+//----------------------------------------------------------------------------//
 
+// class BasicProtocolImpl /////////////////////////////////////////////////////
   class BasicProtocolImpl
   {
   public:
@@ -235,6 +301,7 @@ namespace rubble { namespace rpc {
   private:
      BackEnd * m_backend;
   };
+//----------------------------------------------------------------------------//
 
   inline boost::int32_t BackEnd::rpc_count()
   {

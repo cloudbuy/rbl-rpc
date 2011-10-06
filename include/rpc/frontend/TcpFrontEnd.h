@@ -14,21 +14,21 @@ namespace rubble {
 namespace rpc {
 class TcpFrontEnd;
 
-typedef boost::shared_ptr<boost::asio::ip::tcp::socket> SharedSocket;
+  typedef boost::shared_ptr<boost::asio::ip::tcp::socket> SharedSocket;
 
-enum FRONT_END_CONNECTION_IO_STATE
-{
-  IO_READ_HEADER_WAIT_REQUEST_START_INACTIVE = 0,
-  IO_READ_BODY_REQUEST_ACTIVE = 1,
-  IO_REQUEST_DISPATCHED_ACTIVE = 2, 
-  IO_REQUEST_RESPONSE_WRITE_ACTIVE =3
-};
+  enum FRONT_END_CONNECTION_IO_STATE
+  {
+    IO_READ_HEADER_WAIT_REQUEST_START_INACTIVE = 0,
+    IO_READ_BODY_REQUEST_ACTIVE = 1,
+    IO_REQUEST_DISPATCHED_ACTIVE = 2, 
+    IO_REQUEST_RESPONSE_WRITE_ACTIVE =3
+  };
 
-class FrontEndException
-{
-};
+  class FrontEndException
+  {
+  };
 
-// struct TcpFrontEndConnectionInvoker ////////////////////////////////////////
+// struct TcpFrontEndConnectionInvoker /////////////////////////////////////////
   struct TcpFrontEndConnectionInvoker : public InvokerBase
   {
     typedef boost::shared_ptr<TcpFrontEndConnectionInvoker>  shptr;
@@ -58,9 +58,9 @@ class FrontEndException
     FRONT_END_CONNECTION_IO_STATE   io_state;
     TcpFrontEnd &                   tcp_front_end;
   };
-//---------------------------------------------------------------------------//
+//----------------------------------------------------------------------------//
 
-// class TcpFrontEnd //////////////////////////////////////////////////////////
+// class TcpFrontEnd ///////////////////////////////////////////////////////////
   class TcpFrontEnd 
   {
   public:
@@ -69,20 +69,21 @@ class FrontEndException
     TcpFrontEnd(BackEnd & b_in, short port);
     ~TcpFrontEnd();
   
-    void connect_invoker_manager();
-    void terminate_invoker_manager();
-  
     void start();
     void stop();
     void join();
-    
-    boost::int32_t & rpc_count() { return m_rpc_count; }
-    bool is_accepting() { return m_accepting_requests; }
-    BackEnd & backend() { return m_backend; }
+
+    void connect_to_backend() {}
+    void disconect_from_backend() {}
+
+    boost::int32_t & rpc_count()  { return m_rpc_count; }
+    bool is_accepting()           { return m_accepting_requests; }
+    BackEnd & backend()           { return m_backend; }
 
   private:
     void start_accept();
-    void handle_accept(SharedSocket socket, const boost::system::error_code & error);
+    void handle_accept( SharedSocket socket, 
+                        const boost::system::error_code & error);
   
 
     
@@ -94,8 +95,9 @@ class FrontEndException
     boost::thread                                   m_thread;
     bool                                            m_started;
     BackEnd &                                       m_backend;
+    SynchronisedSignalConnection::aptr              m_sig_connection_aptr;
   };
-//---------------------------------------------------------------------------//
+//----------------------------------------------------------------------------//
 } }
 
 #endif 

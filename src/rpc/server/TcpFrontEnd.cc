@@ -203,53 +203,24 @@ namespace rpc {
       m_rpc_count(0),
       m_accepting_requests(false)
   {
-    connect_invoker_manager();
+    if( ! m_backend.is_useable() )   
+      throw FrontEndException();
+    
+    m_sig_connection_aptr = m_backend.register_invoker_manager(*this);
   }
   //-------------------------------------------------------------------------//
 
   // ~TcpFrontend /////////////////////////////////////////////////////////////
   TcpFrontEnd::~TcpFrontEnd()
   {
-    terminate_invoker_manager();
     stop();
   }
   //-------------------------------------------------------------------------//
-
-  // connect_invoker_manager //////////////////////////////////////////////////
-  void TcpFrontEnd::connect_invoker_manager()
-  {
-//    m_backend.connect_invoker_manager(BackEndInvokerManager::shptr(this));
-  }
-  //-------------------------------------------------------------------------//
-
-  // terminate_invoker_manager ////////////////////////////////////////////////
-  void TcpFrontEnd::terminate_invoker_manager()
-  {
   
-  }
-  //-------------------------------------------------------------------------//
-  
-  // start ////////////////////////////////////////////////////////////////////
-  void TcpFrontEnd::start()
-  {
-    if( ! m_started )
-    {
-      if( ! m_backend.is_useable() )   
-        throw FrontEndException();
-      else
-      {
-        start_accept();
-        m_thread = boost::thread( boost::bind(  &boost::asio::io_service::run,
-                                                &m_io_service) ); 
-        m_started = true;
-      }
-    }
-    else 
-      throw FrontEndException();
-  }
-  //-------------------------------------------------------------------------//
-
   // stop /////////////////////////////////////////////////////////////////////
+  //
+  // things that need to happen for a stop.
+  // 1. check if stop has not allready been performed.
   void TcpFrontEnd::stop()
   {
     m_io_service.stop();
@@ -257,6 +228,17 @@ namespace rpc {
   } 
   //-------------------------------------------------------------------------//
 
+  // start ////////////////////////////////////////////////////////////////////
+  void TcpFrontEnd::start()
+  {
+    start_accept();
+    m_thread = boost::thread( boost::bind(  &boost::asio::io_service::run,
+                                                &m_io_service) ); 
+    m_started = true;
+  }
+  //-------------------------------------------------------------------------//
+
+  
   // join /////////////////////////////////////////////////////////////////////
   void TcpFrontEnd::join()
   { 

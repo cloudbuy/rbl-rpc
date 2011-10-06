@@ -66,8 +66,8 @@ namespace rubble { namespace rpc {
     {
       if( m_client_data.unique() )
       {
-        
-        disconect_from_backend();
+        if(m_connected) 
+          disconect_from_backend();
       }
     }
  
@@ -81,13 +81,15 @@ namespace rubble { namespace rpc {
   
     void disconect_from_backend()
     {
+      boost::lock_guard<boost::mutex> lock(m_mutex);
+
       if(m_connected)
       {
         m_backend.disconect(m_client_data); 
         m_connected = false;
       }
      
-      m_sig_connection.disconnect(); 
+      m_sig_connection->disconnect(); 
     }
 
     bool is_useable()
@@ -108,6 +110,10 @@ namespace rubble { namespace rpc {
    
     bool invoke()
     {
+      boost::lock_guard<boost::mutex> lock(m_mutex);
+      if( m_connected == false )
+        throw InvokerException(); 
+     
       return m_backend.invoke(*this);
     }
  
@@ -124,9 +130,11 @@ namespace rubble { namespace rpc {
         notification_object.wait_for_notification();
     }
     
-    NotificationObject    notification_object;
-    BackEnd &             m_backend;
-    bool                  m_connected;
+    NotificationObject                    notification_object;
+    BackEnd &                             m_backend;
+    bool                                  m_connected;
+    SynchronisedSignalConnection::aptr    m_sig_connection;
+    boost::mutex                          m_mutex;
   };
 
 } }

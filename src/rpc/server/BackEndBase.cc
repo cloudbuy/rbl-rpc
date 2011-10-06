@@ -27,8 +27,7 @@ namespace rubble { namespace rpc {
   // ~BackEnd /////////////////////////////////////////////////////////////////
   BackEnd::~BackEnd()
   {
-    if(m_is_sealed && m_synchronised_state.is_accepting_requests())
-      shutdown();
+    shutdown();
   }
   //-------------------------------------------------------------------------//
 
@@ -113,70 +112,70 @@ namespace rubble { namespace rpc {
   // shutdown /////////////////////////////////////////////////////////////////
   void BackEnd::shutdown(int step_seconds)
   {
-    std::cout << "backend shutdown initiated" << std::endl;
-    BackEndShutdownState  state = shutdown_step();
-    
-    while (state != BACKEND_SHUTDOWN_COMPLETE)
+    if( m_synchronised_state.check_and_initiate_shutdown() ) 
     {
-      std::cout << "Not Complete, Waiting On: ";
-    
-      if( state == BACKEND_SHUTDOWN_WAITING_RPC_END)
-        std::cout << m_synchronised_state.rpc_count() << " rpc call(s) to end." << std::endl;
-
-      if( state == BACKEND_WAITING_ON_CLIENT_DISCONECTIONS)
-        std::cout << manager_count() << " manager(s) and " 
-                  << client_count()  << " client(s) to disconect."
-                  << std::endl;
-
-      boost::this_thread::sleep( 
-        boost::posix_time::seconds(step_seconds) );
+      std::cout << "backend shutdown initiated" << std::endl;
+      BackEndShutdownState  state = shutdown_step();
       
-      state = shutdown_step();
+      while (state != BACKEND_SHUTDOWN_COMPLETE)
+      {
+        std::cout << "Not Complete, Waiting On: ";
+  
+        if( state == BACKEND_SHUTDOWN_WAITING_ON_ACTIVE_RPC_END)
+          std::cout << "waiting on rpc end" << std::endl;
+   
+        if( state == BACKEND_SHUTDOWN_WAITING_ON_MANAGER_DISCONECTIONS)
+          std::cout << manager_count() << " manager(s) and " 
+                    << client_count()  << " client(s) to disconect."
+                    << std::endl;
+
+        boost::this_thread::sleep( 
+          boost::posix_time::seconds(step_seconds) );
+        
+        state = shutdown_step();
+      }
+      std::cout << "shutdown complete" << std::endl;
     }
-    
   }
   //-------------------------------------------------------------------------//
 
   // shutdown_step  ///////////////////////////////////////////////////////////
   BackEndShutdownState BackEnd::shutdown_step()
   {
-
-    BOOST_ASSERT_MSG(m_is_sealed, 
-      "shutdown should not be run on an unsealed backend");
-      
-    if(m_synchronised_state.is_accepting_requests())
+    if( m_synchronised_state.shutdown_state() ==  BACKEND_SHUTDOWN_INITIATED)
     {
       m_synchronised_state.stop_accepting_requests();
-      m_shutdown_state = BACKEND_SHUTDOWN_WAITING_RPC_END;
-    }
-     
-    if( m_shutdown_state ==  BACKEND_SHUTDOWN_WAITING_RPC_END)
-    {
-      if( m_synchronised_state.rpc_count() != 0)
-      {
-        m_shutdown_state = BACKEND_SHUTDOWN_WAITING_RPC_END;
-        return BACKEND_SHUTDOWN_WAITING_RPC_END;
-      }
-      else
-      {
-        m_synchronised_state.disconect_managers();
-        m_shutdown_state = BACKEND_WAITING_ON_CLIENT_DISCONECTIONS;
-      }
-    }
-
     
-    // TODO disconect client block.
-    if( m_shutdown_state == BACKEND_WAITING_ON_CLIENT_DISCONECTIONS)
+      m_synchronised_state.shutdown_state(
+        BACKEND_SHUTDOWN_WAITING_ON_ACTIVE_RPC_END);
+    }
+    
+    if( m_synchronised_state.shutdown_state()  ==  
+        BACKEND_SHUTDOWN_WAITING_ON_ACTIVE_RPC_END)
     {
-      if( m_synchronised_state.manager_count() == 0 &&
-          m_connected_clients.size() == 0 ) 
-      { 
-      }
-      else
+      if( m_synchronised_state.rpc_count() == 0)
       {
-        return m_shutdown_state;
+        m_synchronised_state.shutdown_state(
+          BACKEND_SHUTDOWN_WAITING_ON_MANAGER_DISCONECTIONS);
+        m_synchronised_state.disconect_managers();
       }
-    }    
+      else 
+        return BACKEND_SHUTDOWN_WAITING_ON_ACTIVE_RPC_END;
+    }
+   
+    // TODO disconect client block.
+    if( m_synchronised_state.shutdown_state() 
+        == BACKEND_SHUTDOWN_WAITING_ON_MANAGER_DISCONECTIONS)
+    {
+      if( m_synchronised_state.manager_count() == 0) 
+      { 
+        BOOST_ASSERT_MSG(m_connected_clients.size() == 0,
+          " Every connected client is managed by a connected manager. "
+          " All clients should have been disconected if the managers have.");
+      }
+    }
+    else
+      return BACKEND_SHUTDOWN_WAITING_ON_MANAGER_DISCONECTIONS;  
     
     m_work.reset();
     m_thread_group.join_all();
