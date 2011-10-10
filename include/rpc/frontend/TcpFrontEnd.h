@@ -73,8 +73,8 @@ class TcpFrontEnd;
     void stop();
     void join();
 
-    void connect_to_backend() {}
-    void disconect_from_backend() {}
+    void connect_to_backend();
+    void disconect_from_backend();
 
     boost::int32_t & rpc_count()  { return m_rpc_count; }
     bool is_accepting()           { return m_accepting_requests; }
@@ -94,6 +94,7 @@ class TcpFrontEnd;
     std::set<TcpFrontEndConnectionInvoker::shptr >  m_connections;
     boost::thread                                   m_thread;
     bool                                            m_started;
+    bool                                            m_connected_to_backend;
     BackEnd &                                       m_backend;
     SynchronisedSignalConnection::aptr              m_sig_connection_aptr;
   };

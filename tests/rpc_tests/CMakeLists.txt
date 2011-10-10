@@ -15,3 +15,6 @@ ADD_EXECUTABLE(test_RpcExceptions TestRpcExceptions.cc)
 target_link_libraries(test_RpcExceptions ${Boost_LIBRARIES} ${GTEST_LIBRARIES} ${PROTOBUF_LIBRARY} marshall_rpc_proto rpc_common rpc_server rpc_client)
 set_target_properties(test_RpcExceptions PROPERTIES COMPILE_DEFINITIONS ISOLATED_GTEST_COMPILE)
 
+ADD_EXECUTABLE( test_TcpDisconect TestTcpDisconect.cc)
+target_link_libraries(test_TcpDisconect ${Boost_LIBRARIES} ${GTEST_LIBRARIES} ${PROTOBUF_LIBRARY} marshall_rpc_proto rpc_common rpc_server rpc_client)
+set_target_properties(test_TcpDisconect PROPERTIES COMPILE_DEFINITIONS ISOLATED_GTEST_COMPILE)

@@ -127,7 +127,7 @@ namespace rubble { namespace rpc {
 
     void after_post()
     {
-        notification_object.wait_for_notification();
+      notification_object.wait_for_notification();
     }
     
     NotificationObject                    notification_object;

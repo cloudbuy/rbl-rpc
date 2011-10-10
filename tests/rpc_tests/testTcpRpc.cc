@@ -160,7 +160,6 @@ TEST_F(FactorInProcessInvokerTest, compilation_test)
   
   ASSERT_FALSE(tso->is_subscribed());
   ASSERT_FALSE(tso2->is_subscribed());
-
 }
 
 #ifdef ISOLATED_GTEST_COMPILE

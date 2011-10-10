@@ -127,7 +127,7 @@ namespace rpc {
       m_client_data->request().ParseFromArray( buffer->get(), bytes_sent);
       io_state = IO_REQUEST_DISPATCHED_ACTIVE;
 
-      if(invoke())
+      if( invoke() )
         handle_write_response();
     }
     else handle_error(error,"handled_read_body");
@@ -201,7 +201,8 @@ namespace rpc {
                   port)),
       m_started(false),
       m_rpc_count(0),
-      m_accepting_requests(false)
+      m_accepting_requests(false),
+      m_connected_to_backend(false)
   {
     if( ! m_backend.is_useable() )   
       throw FrontEndException();
@@ -243,6 +244,23 @@ namespace rpc {
   void TcpFrontEnd::join()
   { 
     m_thread.join();
+  }
+  //-------------------------------------------------------------------------//
+  
+  // connect_to_backend /////////////////////////////////////////////////////// 
+  void TcpFrontEnd::connect_to_backend()
+  {
+    if(m_started)
+      throw FrontEndException();
+
+    m_connected_to_backend = true;
+  }
+  //-------------------------------------------------------------------------//
+
+  // disconect_from_backend ///////////////////////////////////////////////////
+  void TcpFrontEnd::disconect_from_backend()
+  {
+    m_io_service.stop(); 
   }
   //-------------------------------------------------------------------------//
 
