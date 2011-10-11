@@ -65,7 +65,8 @@ class TcpFrontEnd;
   {
   public:
     typedef boost::scoped_ptr<TcpFrontEnd> scptr;
-    
+    typedef boost::scoped_ptr<boost::asio::ip::tcp::acceptor> acceptor_scptr;
+ 
     TcpFrontEnd(BackEnd & b_in, short port);
     ~TcpFrontEnd();
   
@@ -88,9 +89,10 @@ class TcpFrontEnd;
 
     
     boost::int32_t                                  m_rpc_count;
+    short                                           m_port;
     bool                                            m_accepting_requests;
     boost::asio::io_service                         m_io_service;
-    boost::asio::ip::tcp::acceptor                  m_acceptor;
+    acceptor_scptr                                  m_acceptor_scptr;
     std::set<TcpFrontEndConnectionInvoker::shptr >  m_connections;
     boost::thread                                   m_thread;
     bool                                            m_started;

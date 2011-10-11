@@ -196,11 +196,9 @@ namespace rpc {
   TcpFrontEnd::TcpFrontEnd(BackEnd & b_in, short port)
     : m_io_service(),
       m_backend(b_in),
-      m_acceptor( m_io_service, 
-                  boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(),
-                  port)),
       m_started(false),
       m_rpc_count(0),
+      m_port(port),
       m_accepting_requests(false),
       m_connected_to_backend(false)
   {
@@ -232,10 +230,19 @@ namespace rpc {
   // start ////////////////////////////////////////////////////////////////////
   void TcpFrontEnd::start()
   {
-    start_accept();
-    m_thread = boost::thread( boost::bind(  &boost::asio::io_service::run,
-                                                &m_io_service) ); 
-    m_started = true;
+    if(m_started == true)
+      throw FrontEndException();
+    else
+    {
+      m_acceptor_scptr.reset(  new boost::asio::ip::tcp::acceptor( m_io_service, 
+                    boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(),
+                    m_port)));
+
+      start_accept();
+      m_thread = boost::thread( boost::bind(  &boost::asio::io_service::run,
+                                                  &m_io_service) ); 
+      m_started = true;
+    }
   }
   //-------------------------------------------------------------------------//
 
@@ -301,7 +308,7 @@ namespace rpc {
     SharedSocket socket(new boost::asio::ip::tcp::socket(m_io_service) );
     m_accepting_requests = true; 
 
-    m_acceptor.async_accept( *socket.get(), 
+    m_acceptor_scptr->async_accept( *socket.get(), 
       boost::bind(&TcpFrontEnd::handle_accept, this, 
         socket,boost::asio::placeholders::error));
     

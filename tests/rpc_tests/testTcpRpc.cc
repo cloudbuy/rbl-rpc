@@ -49,6 +49,21 @@ TEST(temp, temp_test)
 using namespace rubble::rpc;
 using namespace rubble::rpc::test_proto;
 
+TEST(DisconectionTests, test_one)
+{
+  BackEnd b(basic_protocol::SOURCE_RELAY , basic_protocol::TARGET_MARSHALL);
+  b.pool_size(1);
+
+  b.start();
+
+  TcpFrontEnd tfe(b,5555);
+  
+  ASSERT_THROW(new TcpInvoker("127.0.0.1", 5555), TcpInvokerException);
+
+  tfe.start();
+  ASSERT_NO_THROW(new TcpInvoker("127.0.0.1", 5555));
+
+}
 // code here should mirror the code in the TestClientServiceCookies.cc file
 class test_service_one_impl
 {
@@ -100,9 +115,9 @@ protected:
     b.start();
     
     tfe.reset(new TcpFrontEnd(b,5555));
+    tfe->start();
     ti.reset(new TcpInvoker("127.0.0.1", 5555));
-      tfe->start();
-    
+        
     scf.reset(new ServiceClientFactory( "test service", *ti.get(),
                                         basic_protocol::SOURCE_RELAY, 
                                         basic_protocol::TARGET_MARSHALL));

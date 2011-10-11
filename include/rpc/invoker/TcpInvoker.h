@@ -24,6 +24,8 @@ namespace rubble { namespace rpc {
       
       if(!m_error_code)
         m_useable = true;
+      else 
+        throw TcpInvokerException();
     }
 
     void reset()

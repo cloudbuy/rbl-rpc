@@ -21,7 +21,10 @@ TEST(DisconectionTests, test_one)
 
   TcpFrontEnd tfe(b,5555);
   TcpInvoker ti("127.0.0.1", 5555);
-  tfe.start();
+//  tfe.start();
+  
+  ASSERT_FALSE(ti.is_useable());
+    
 }
 
 #ifdef ISOLATED_GTEST_COMPILE
