@@ -20,10 +20,10 @@ TEST(DisconectionTests, test_one)
   b.start();
 
   TcpFrontEnd tfe(b,5555);
+  tfe.start();
   TcpInvoker ti("127.0.0.1", 5555);
-//  tfe.start();
   
-  ASSERT_FALSE(ti.is_useable());
+  ASSERT_TRUE(ti.is_useable());
     
 }
 

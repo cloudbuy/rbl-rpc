@@ -81,9 +81,10 @@ TEST(RPC_EXCEPTION_TEST, TCP_NOT_ACCEPTING)
   b.start();
 
   TcpFrontEnd tfe(b,5555);
+  tfe.start();
+
   TcpInvoker ti("127.0.0.1", 5555);
 
-  tfe.start();
 
   ServiceClientFactory::scptr scf;
 
@@ -185,8 +186,9 @@ TEST(RPC_EXCEPTION_TEST, TCP_PROCESS_NOT_ESTABLISHED)
     b.start();
     
     TcpFrontEnd tfe(b,5555);
-    TcpInvoker ti("127.0.0.1", 5555);
     tfe.start();
+
+    TcpInvoker ti("127.0.0.1", 5555);
 
     BPC bpc(ti);
 
@@ -268,8 +270,9 @@ TEST(RPC_EXCEPTION_TEST, TCP_PROCESS_NO_SERVICE_WITH_ORDINAL)
     b.start();
     
     TcpFrontEnd tfe(b,5555);
-    TcpInvoker ti("127.0.0.1", 5555);
     tfe.start();
+
+    TcpInvoker ti("127.0.0.1", 5555);
 
     BPC bpc(ti);
 
@@ -359,8 +362,9 @@ TEST(RPC_EXCEPTION_TEST, TCP_PROCESS_NO_REQUEST_WITH_ORDINAL)
     b.start();
     
     TcpFrontEnd tfe(b,5555);
-    TcpInvoker ti("127.0.0.1", 5555);
     tfe.start();
+
+    TcpInvoker ti("127.0.0.1", 5555);
 
     BPC bpc(ti);
 
@@ -445,8 +449,9 @@ TEST(RPC_EXCEPTION_TEST, TCP_PROCESS_NOT_SUBSCRIBED)
     b.start();
 
     TcpFrontEnd tfe(b,5555);
-    TcpInvoker ti("127.0.0.1", 5555);
     tfe.start();
+
+    TcpInvoker ti("127.0.0.1", 5555);
 
     BPC bpc(ti);
 
@@ -607,8 +612,8 @@ TEST(RPC_EXCEPTION_TEST, TCP_PROCESS_REMOTE_SERIALIZATION_ERROR)
     b.start();
 
     TcpFrontEnd tfe(b,5555);
-    SerErrTcpInvoker ti("127.0.0.1", 5555);
     tfe.start();
+    SerErrTcpInvoker ti("127.0.0.1", 5555);
 
     BPC bpc(ti);
 
