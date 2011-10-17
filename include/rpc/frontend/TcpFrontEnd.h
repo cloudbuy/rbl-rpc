@@ -9,6 +9,7 @@
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include <set>
+#include <rpc/invoker/InProcessInvoker.h>
 
 namespace rubble {
 namespace rpc {
@@ -29,7 +30,9 @@ class TcpFrontEnd;
   };
 
 // struct TcpFrontEndConnectionInvoker /////////////////////////////////////////
-  struct TcpFrontEndConnectionInvoker : public InvokerBase
+  struct TcpFrontEndConnectionInvoker 
+    : public InvokerBase, 
+      public boost::enable_shared_from_this<TcpFrontEndConnectionInvoker>
   {
     typedef boost::shared_ptr<TcpFrontEndConnectionInvoker>  shptr;
 
@@ -56,31 +59,37 @@ class TcpFrontEnd;
     SharedSocket                    socket;
     boost::shared_ptr<Buffer>       buffer;
     FRONT_END_CONNECTION_IO_STATE   io_state;
-    TcpFrontEnd &                   tcp_front_end;
+    TcpFrontEnd &                   tcp_front_end;  
   };
 //----------------------------------------------------------------------------//
-
 // class TcpFrontEnd ///////////////////////////////////////////////////////////
   class TcpFrontEnd 
   {
   public:
-    typedef boost::scoped_ptr<TcpFrontEnd> scptr;
+    typedef boost::scoped_ptr<TcpFrontEnd>                    scptr;
     typedef boost::scoped_ptr<boost::asio::ip::tcp::acceptor> acceptor_scptr;
- 
+    typedef std::set<TcpFrontEndConnectionInvoker::shptr >    t_connection_set;
+    
+  
     TcpFrontEnd(BackEnd & b_in, short port);
     ~TcpFrontEnd();
   
     void start();
     void stop();
-    void join();
 
     void connect_to_backend();
     void disconect_from_backend();
 
-    boost::int32_t & rpc_count()  { return m_rpc_count; }
-    bool is_accepting()           { return m_accepting_requests; }
-    BackEnd & backend()           { return m_backend; }
+    void disconnect_client(TcpFrontEndConnectionInvoker::shptr);
 
+    boost::int32_t & rpc_count()    { return m_rpc_count;           }
+    bool is_accepting()             { return m_accepting_requests;  }
+    BackEnd & backend()             { return m_backend;             }
+    std::size_t connection_count()  { return m_connections.size();  }
+    bool & shutdown_initiated()     { return m_shutdown_initiated;  }
+ 
+    void shutdown_handler();
+ 
   private:
     void start_accept();
     void handle_accept( SharedSocket socket, 
@@ -93,12 +102,17 @@ class TcpFrontEnd;
     bool                                            m_accepting_requests;
     boost::asio::io_service                         m_io_service;
     acceptor_scptr                                  m_acceptor_scptr;
-    std::set<TcpFrontEndConnectionInvoker::shptr >  m_connections;
+    t_connection_set                                m_connections;
     boost::thread                                   m_thread;
     bool                                            m_started;
     bool                                            m_connected_to_backend;
     BackEnd &                                       m_backend;
+
+    bool                                            m_shutdown_initiated;
     SynchronisedSignalConnection::aptr              m_sig_connection_aptr;
+    NotificationObject                              m_shutdown_notification;
+    boost::system::error_code                       m_error_code;
+
   };
 //----------------------------------------------------------------------------//
 } }

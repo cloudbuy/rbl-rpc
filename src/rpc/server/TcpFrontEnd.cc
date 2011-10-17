@@ -1,4 +1,5 @@
 #include <rpc/frontend/TcpFrontEnd.h>
+#include <rpc/invoker/InvokerBase.h>
 
 namespace rubble {
 namespace rpc {
@@ -18,7 +19,7 @@ namespace rpc {
   // ~TcpFrontEndConnectionInvoker ////////////////////////////////////////////
   TcpFrontEndConnectionInvoker::~TcpFrontEndConnectionInvoker()
   {
-    tcp_front_end.backend().disconect(m_client_data); 
+    tcp_front_end.backend().disconnect(m_client_data); 
   }
   //-------------------------------------------------------------------------//
 
@@ -90,9 +91,16 @@ namespace rpc {
   void TcpFrontEndConnectionInvoker::handle_read_header(  
     std::size_t bytes_sent, const boost::system::error_code & error)
   {
- 
     if(!error)
     {
+      // to take down sockets which were involved in rpc when the shutdown
+      // signal was originally deliverd
+      if(tcp_front_end.shutdown_initiated())
+      {
+        tcp_front_end.disconnect_client( shared_from_this() );
+        return;
+      }
+
       boost::uint32_t msg_sz;
       google::protobuf::io::CodedInputStream cis(buffer->get(),8);
           
@@ -127,8 +135,13 @@ namespace rpc {
       m_client_data->request().ParseFromArray( buffer->get(), bytes_sent);
       io_state = IO_REQUEST_DISPATCHED_ACTIVE;
 
-      if( invoke() )
+     tcp_front_end.rpc_count()++;
+
+      if( invoke() ) {
         handle_write_response();
+        tcp_front_end.rpc_count()--;
+      }
+
     }
     else handle_error(error,"handled_read_body");
   }
@@ -137,6 +150,7 @@ namespace rpc {
   // handle_write_response ////////////////////////////////////////////////////
   void TcpFrontEndConnectionInvoker::handle_write_response()
   {
+    tcp_front_end.rpc_count()--;
     io_state = IO_REQUEST_RESPONSE_WRITE_ACTIVE;
 
     boost::uint32_t flag_return;
@@ -200,7 +214,8 @@ namespace rpc {
       m_rpc_count(0),
       m_port(port),
       m_accepting_requests(false),
-      m_connected_to_backend(false)
+      m_connected_to_backend(false),
+      m_shutdown_initiated(false)
   {
     if( ! m_backend.is_useable() )   
       throw FrontEndException();
@@ -222,8 +237,7 @@ namespace rpc {
   // 1. check if stop has not allready been performed.
   void TcpFrontEnd::stop()
   {
-    m_io_service.stop();
-    join();
+    disconect_from_backend();
   } 
   //-------------------------------------------------------------------------//
 
@@ -245,15 +259,7 @@ namespace rpc {
     }
   }
   //-------------------------------------------------------------------------//
-
-  
-  // join /////////////////////////////////////////////////////////////////////
-  void TcpFrontEnd::join()
-  { 
-    m_thread.join();
-  }
-  //-------------------------------------------------------------------------//
-  
+    
   // connect_to_backend /////////////////////////////////////////////////////// 
   void TcpFrontEnd::connect_to_backend()
   {
@@ -264,10 +270,73 @@ namespace rpc {
   }
   //-------------------------------------------------------------------------//
 
+  // disconnect_client ////////////////////////////////////////////////////////
+  void TcpFrontEnd::disconnect_client(TcpFrontEndConnectionInvoker::shptr inv)
+  {
+    inv->socket->shutdown(  boost::asio::ip::tcp::socket::shutdown_both,
+                            m_error_code);
+    if(m_error_code)
+      throw FrontEndException();
+
+    inv->socket->close(m_error_code);
+    if(m_error_code)
+      throw FrontEndException();
+    
+    if( m_connections.erase(inv) != 1)
+      throw FrontEndException();
+  }  
+  //-------------------------------------------------------------------------//  
+
+  // shutdown_handler ///////////////////////////////////////////////////////// 
+  void TcpFrontEnd::shutdown_handler()
+  {
+    m_shutdown_initiated = true;
+
+    m_acceptor_scptr->cancel(m_error_code);
+    if(m_error_code)
+      throw FrontEndException();
+
+    m_acceptor_scptr->close(m_error_code);
+    if(m_error_code)
+      throw FrontEndException();
+
+    BOOST_FOREACH( TcpFrontEndConnectionInvoker::shptr inv, m_connections)
+    {
+      if( inv->io_state == IO_READ_HEADER_WAIT_REQUEST_START_INACTIVE)
+      {
+        disconnect_client(inv);
+      }
+    }
+    m_shutdown_notification.notify_one();
+  }
+  //-------------------------------------------------------------------------//
+
   // disconect_from_backend ///////////////////////////////////////////////////
   void TcpFrontEnd::disconect_from_backend()
   {
-    m_io_service.stop(); 
+    std::cout << "called" << std::endl;
+    if(m_sig_connection_aptr->is_connected())
+    {
+      std::cout << "TcpFrontEnd Shutdown Initiated" << std::endl;
+      // disconect all clients before disconecting from the backend
+      // post a method that will disconect clients into the io_service
+      // as this io_service is single threaded no locking will be required.
+      m_io_service.post(
+        boost::bind(&TcpFrontEnd::shutdown_handler,this) );
+
+      m_shutdown_notification.wait_for_notification();
+
+      m_sig_connection_aptr->disconnect();
+  
+      int shutdown_count=5; 
+      while(m_io_service.stopped() != true )
+      {
+        if(shutdown_count > 0)
+          boost::this_thread::sleep( boost::posix_time::seconds(2) );
+      } 
+
+      std::cout << "TcpFrontEnd Shutdown Complete" << std::endl;
+    }
   }
   //-------------------------------------------------------------------------//
 
@@ -292,13 +361,13 @@ namespace rpc {
             boost::asio::placeholders::error 
         ) 
       );
+      start_accept();
     }
     else
     {
       std::cout << "error in handle_accept : val(" << error.value()
         << ") - str(" << error.message()<< ")."<< std::endl;
     }
-    start_accept();
   }
   //-------------------------------------------------------------------------//
   

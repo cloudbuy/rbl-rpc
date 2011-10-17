@@ -14,6 +14,8 @@ using namespace rubble::rpc;
 
 TEST(DisconectionTests, test_one)
 {
+  TcpInvoker::scptr ti;
+  TcpInvoker::scptr ti2;
   BackEnd b(basic_protocol::SOURCE_RELAY , basic_protocol::TARGET_MARSHALL);
   b.pool_size(1);
 
@@ -21,10 +23,26 @@ TEST(DisconectionTests, test_one)
 
   TcpFrontEnd tfe(b,5555);
   tfe.start();
-  TcpInvoker ti("127.0.0.1", 5555);
+
+
+  // since handle accept is asynchronous the following operations can fail.
+  // to prevent the failure the sleep time may be increased.
   
-  ASSERT_TRUE(ti.is_useable());
-    
+  ti.reset(new TcpInvoker("127.0.0.1", 5555));
+  EXPECT_TRUE(ti->m_socket.is_open());
+  boost::this_thread::sleep(boost::posix_time::seconds(1));
+  EXPECT_EQ(tfe.connection_count(),1); 
+
+  ti2.reset(new TcpInvoker("127.0.0.1", 5555));
+  EXPECT_TRUE(ti2->m_socket.is_open());
+  boost::this_thread::sleep(boost::posix_time::seconds(1));
+  EXPECT_EQ(tfe.connection_count(),2); 
+  ASSERT_EQ(b.client_count(),2);
+
+  ASSERT_EQ(tfe.rpc_count(), 0);
+
+  ASSERT_TRUE(ti->is_useable());
+  //std::cin.get();     
 }
 
 #ifdef ISOLATED_GTEST_COMPILE

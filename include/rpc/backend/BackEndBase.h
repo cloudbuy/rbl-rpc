@@ -186,7 +186,7 @@ namespace rubble { namespace rpc {
     typedef common::OidContainer<common::Oid, ServiceBase::shp> t_services;
 
     BackEnd    (  basic_protocol::SourceConnectionType       source_type,
-                  basic_protocol::DestinationConnectionType backend_type);
+                  basic_protocol::DestinationConnectionType     backend_type);
     ~BackEnd();
 
     void pool_size(int pool_size_in) { m_pool_size = pool_size_in; }
@@ -207,7 +207,7 @@ namespace rubble { namespace rpc {
     
  
     void connect(ClientData::shptr   client_data);
-    void disconect(ClientData::shptr client_data);
+    void disconnect(ClientData::shptr client_data);
 
     std::size_t manager_count();
     std::size_t client_count();
@@ -254,7 +254,7 @@ namespace rubble { namespace rpc {
 
     boost::scoped_ptr<boost::asio::io_service::work>    m_work;
     
-     };
+  };
 //----------------------------------------------------------------------------//
 
 // class BasicProtocolImpl /////////////////////////////////////////////////////

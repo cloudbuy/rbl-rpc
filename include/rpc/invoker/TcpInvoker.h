@@ -108,7 +108,7 @@ namespace rubble { namespace rpc {
 
     bool is_useable()
     {
-      return m_useable;
+      return m_useable ;
     }
   
     bool                            m_useable;

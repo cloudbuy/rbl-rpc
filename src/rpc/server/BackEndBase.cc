@@ -19,7 +19,6 @@ namespace rubble { namespace rpc {
         new basic_protocol::basic_protocol<BasicProtocolImpl>();
       bp->impl().backend(this); 
       ServiceBase::shp sb_shp(bp);
-      
       register_and_init_service(sb_shp);
     }
   //-------------------------------------------------------------------------//
@@ -134,7 +133,7 @@ namespace rubble { namespace rpc {
         
         state = shutdown_step();
       }
-      std::cout << "shutdown complete" << std::endl;
+      std::cout << "backend shutdown complete" << std::endl;
     }
   }
   //-------------------------------------------------------------------------//
@@ -216,8 +215,8 @@ namespace rubble { namespace rpc {
   }
   //-------------------------------------------------------------------------//
 
-  // disconect ////////////////////////////////////////////////////////////////
-  void BackEnd::disconect(ClientData::shptr client_data)
+  // disconnect ////////////////////////////////////////////////////////////////
+  void BackEnd::disconnect(ClientData::shptr client_data)
   {
     int m_sz = m_services.size();
 

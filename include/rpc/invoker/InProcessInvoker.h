@@ -5,7 +5,8 @@
 namespace rubble { namespace rpc {
   struct NotificationObject
   { 
-    typedef NotificationObject * ptr; 
+    typedef NotificationObject *                  ptr;
+    typedef boost::shared_ptr<NotificationObject> shptr;
 
     NotificationObject()
     {
@@ -85,7 +86,7 @@ namespace rubble { namespace rpc {
 
       if(m_connected)
       {
-        m_backend.disconect(m_client_data); 
+        m_backend.disconnect(m_client_data); 
         m_connected = false;
       }
      
