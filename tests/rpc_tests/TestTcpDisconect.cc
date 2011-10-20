@@ -42,7 +42,9 @@ TEST(DisconectionTests, test_one)
   ASSERT_EQ(tfe.rpc_count(), 0);
 
   ASSERT_TRUE(ti->is_useable());
-  //std::cin.get();     
+  //std::cin.get();
+  ASSERT_NO_THROW(tfe.stop());
+  ASSERT_EQ(b.client_count(),0); 
 }
 
 #ifdef ISOLATED_GTEST_COMPILE

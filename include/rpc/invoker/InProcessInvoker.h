@@ -68,7 +68,7 @@ namespace rubble { namespace rpc {
       if( m_client_data.unique() )
       {
         if(m_connected) 
-          disconect_from_backend();
+          disconnect_from_backend();
       }
     }
  
@@ -80,7 +80,7 @@ namespace rubble { namespace rpc {
       m_connected = true;
     }
   
-    void disconect_from_backend()
+    void disconnect_from_backend()
     {
       boost::lock_guard<boost::mutex> lock(m_mutex);
 

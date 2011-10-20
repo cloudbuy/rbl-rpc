@@ -127,7 +127,7 @@ namespace rubble { namespace rpc {
       m.connect_to_backend();
       
       boost::signals::connection con = f_disc_invoker_sig.connect(
-             boost::bind( &Manager::disconect_from_backend, &m));
+             boost::bind( &Manager::disconnect_from_backend, &m));
 
       return SynchronisedSignalConnection::aptr( 
         new SynchronisedSignalConnection( 

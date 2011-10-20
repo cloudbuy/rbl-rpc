@@ -237,15 +237,18 @@ namespace rpc {
   // 1. check if stop has not allready been performed.
   void TcpFrontEnd::stop()
   {
-    disconect_from_backend();
+    disconnect_from_backend();
   } 
   //-------------------------------------------------------------------------//
 
   // start ////////////////////////////////////////////////////////////////////
   void TcpFrontEnd::start()
   {
+    boost::lock_guard<boost::mutex> lock(m_mutex);
+
     if(m_started == true)
       throw FrontEndException();
+
     else
     {
       m_acceptor_scptr.reset(  new boost::asio::ip::tcp::acceptor( m_io_service, 
@@ -263,6 +266,8 @@ namespace rpc {
   // connect_to_backend /////////////////////////////////////////////////////// 
   void TcpFrontEnd::connect_to_backend()
   {
+    boost::lock_guard<boost::mutex> lock(m_mutex);
+
     if(m_started)
       throw FrontEndException();
 
@@ -311,9 +316,14 @@ namespace rpc {
   }
   //-------------------------------------------------------------------------//
 
-  // disconect_from_backend ///////////////////////////////////////////////////
-  void TcpFrontEnd::disconect_from_backend()
+  // disconnect_from_backend ///////////////////////////////////////////////////
+  void TcpFrontEnd::disconnect_from_backend()
   {
+    boost::lock_guard<boost::mutex> lock(m_mutex);
+
+    if(m_shutdown_initiated == true )
+      return;      
+
     std::cout << "called" << std::endl;
     if(m_sig_connection_aptr->is_connected())
     {
@@ -326,14 +336,16 @@ namespace rpc {
 
       m_shutdown_notification.wait_for_notification();
 
-      m_sig_connection_aptr->disconnect();
-  
       int shutdown_count=5; 
       while(m_io_service.stopped() != true )
       {
         if(shutdown_count > 0)
           boost::this_thread::sleep( boost::posix_time::seconds(2) );
-      } 
+        else
+          throw FrontEndException();
+        shutdown_count--;
+      }
+      m_sig_connection_aptr->disconnect();
 
       std::cout << "TcpFrontEnd Shutdown Complete" << std::endl;
     }

@@ -723,7 +723,7 @@ TEST_F(CookieTest, cookie_dc_test)
   
   EXPECT_FALSE( c_csc.contains_cookie(1,invoker->client_data().get()) == ClientServiceCookies::COOKIE_ABSENT);
   
-  invoker->disconect_from_backend();
+  invoker->disconnect_from_backend();
   
   EXPECT_TRUE(s__->unsubscribe_sentinel);
   EXPECT_TRUE(s__->sentinel);

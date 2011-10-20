@@ -1,4 +1,2 @@
 # add_subdirectory(basic_client_compilation_tests)
-add_subdirectory(basic_server_compilation_tests)
 add_subdirectory(rpc_tests)
-add_subdirectory(gen_test)

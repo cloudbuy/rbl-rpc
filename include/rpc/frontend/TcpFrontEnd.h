@@ -73,13 +73,16 @@ class TcpFrontEnd;
   
     TcpFrontEnd(BackEnd & b_in, short port);
     ~TcpFrontEnd();
-  
+ 
+    // locked for outside of event loop / external usage. //
     void start();
     void stop();
 
     void connect_to_backend();
-    void disconect_from_backend();
+    void disconnect_from_backend();
+    //----------------------------------------------------//
 
+    // only accessed from event loop. /////////////////////////////////////////
     void disconnect_client(TcpFrontEndConnectionInvoker::shptr);
 
     boost::int32_t & rpc_count()    { return m_rpc_count;           }
@@ -87,15 +90,15 @@ class TcpFrontEnd;
     BackEnd & backend()             { return m_backend;             }
     std::size_t connection_count()  { return m_connections.size();  }
     bool & shutdown_initiated()     { return m_shutdown_initiated;  }
- 
-    void shutdown_handler();
- 
+    //-----------------------------------------------------------------------//
+     
   private:
+    void shutdown_handler();
+
     void start_accept();
     void handle_accept( SharedSocket socket, 
                         const boost::system::error_code & error);
   
-
     
     boost::int32_t                                  m_rpc_count;
     short                                           m_port;
@@ -112,7 +115,8 @@ class TcpFrontEnd;
     SynchronisedSignalConnection::aptr              m_sig_connection_aptr;
     NotificationObject                              m_shutdown_notification;
     boost::system::error_code                       m_error_code;
-
+    
+    boost::mutex                                    m_mutex; 
   };
 //----------------------------------------------------------------------------//
 } }
